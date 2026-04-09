@@ -1,0 +1,10 @@
+node_modules
+.env
+*.log
+.git
+tests
+.github
+coverage
+ROADMAP.md
+vitest.config.js
+.dockerignore

@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Digest Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #010409;
+      --surface: #0d1117;
+      --card: #161b22;
+      --border: #21262d;
+      --border-bright: #30363d;
+      --text: #e6edf3;
+      --text-secondary: #c9d1d9;
+      --text-dim: #484f58;
+      --text-faint: #30363d;
+      --code-bg: #1c2128;
+      --accent: #58a6ff;
+      --accent-bg: rgba(88, 166, 255, 0.1);
+      --red: #ff5a52;
+      --red-bg: rgba(255, 45, 32, 0.08);
+      --orange: #ff8a56;
+      --orange-bg: rgba(255, 107, 43, 0.08);
+      --yellow: #f0c020;
+      --yellow-bg: rgba(240, 192, 32, 0.08);
+      --green: #30a14e;
+      --green-bg: rgba(48, 161, 78, 0.08);
+      --purple: #a371f7;
+      --purple-bg: rgba(163, 113, 247, 0.08);
+      --row-hover: rgba(22, 27, 34, 0.6);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* --- Layout --- */
+    .shell {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* --- Header --- */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+      animation: fadeUp 0.4s ease both;
+    }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--surface), var(--card));
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .header h1 { font-size: 22px; font-weight: 700; }
+    .header .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* --- Buttons --- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-secondary);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.2s;
+    }
+    .btn:hover { border-color: var(--border-bright); background: var(--card); color: var(--text); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent-bg); border-color: rgba(88,166,255,0.3); color: var(--accent); }
+    .btn-primary:hover { background: rgba(88,166,255,0.18); }
+
+    /* --- Stat Grid --- */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card:hover { border-color: var(--border-bright); }
+    .stat-card.active { border-color: var(--active-color, var(--accent)); }
+    .stat-card.active::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: var(--active-color, var(--accent));
+    }
+    .stat-emoji { font-size: 22px; margin-bottom: 6px; }
+    .stat-count { font-size: 28px; font-weight: 700; }
+    .stat-label { font-size: 12px; color: var(--text-dim); margin-top: 4px; font-weight: 500; }
+
+    /* --- Tabs --- */
+    .tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      margin-bottom: 0;
+    }
+    .tab {
+      background: none; border: none;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 12px; font-weight: 400;
+      color: var(--text-dim);
+      border-bottom: 2px solid transparent;
+      font-family: 'DM Sans', sans-serif;
+      display: flex; align-items: center; gap: 6px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text-secondary); }
+    .tab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+    .tab .badge {
+      padding: 1px 6px; border-radius: 10px;
+      font-size: 10px; font-weight: 600;
+      background: var(--code-bg); color: var(--text-dim);
+    }
+    .tab.active .badge { background: var(--accent-bg); color: var(--accent); }
+
+    /* --- Panel --- */
+    .panel { padding: 20px 0; min-height: 200px; }
+
+    /* --- Rows --- */
+    .row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      font-size: 13px;
+      animation: fadeUp 0.3s ease both;
+    }
+    .row:hover { background: var(--row-hover); }
+    .row-title { font-weight: 500; color: var(--text); }
+    .row-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .row-sub .sep { color: var(--border); }
+    .row-right { flex-shrink: 0; text-align: right; }
+
+    /* --- Badges --- */
+    .sev { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; }
+    .sev-critical { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,45,32,0.25); }
+    .sev-high { background: var(--orange-bg); color: var(--orange); border: 1px solid rgba(255,107,43,0.25); }
+    .sev-medium { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(240,192,32,0.25); }
+    .sev-low { background: var(--green-bg); color: var(--green); border: 1px solid rgba(48,161,78,0.25); }
+    .sev-warning { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(240,192,32,0.25); }
+
+    .label-badge {
+      display: inline-block; padding: 1px 7px; border-radius: 12px;
+      font-size: 11px; font-weight: 500; margin-right: 4px;
+    }
+
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .num-badge {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+
+    code, .code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    /* --- AI Summary Card --- */
+    .ai-card {
+      background: linear-gradient(135deg, var(--red-bg), var(--orange-bg));
+      border: 1px solid rgba(255,45,32,0.18);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .ai-card h3 { display: flex; align-items: center; gap: 10px; font-size: 15px; margin-bottom: 8px; }
+    .ai-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+    .actions-section { margin-top: 28px; }
+    .actions-title { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; }
+    .action-item {
+      display: flex; gap: 10px; padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      animation: fadeUp 0.3s ease both;
+    }
+    .action-item:last-child { border-bottom: none; }
+    .action-num {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: var(--accent-bg); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
+    }
+    .action-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+    /* --- Category Insight --- */
+    .insight {
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    .insight::before { content: '💡 '; }
+
+    /* --- Loading --- */
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    .loading-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 300px;
+    }
+
+    /* --- Empty State --- */
+    .empty {
+      text-align: center; padding: 48px 20px;
+      color: var(--text-dim);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+    .empty h3 { font-size: 16px; color: var(--text-secondary); margin-bottom: 8px; }
+    .empty p { font-size: 13px; max-width: 400px; margin: 0 auto 20px; line-height: 1.6; }
+
+    /* --- Status dot --- */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      animation: pulse 2s ease infinite;
+    }
+    .status-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-dim); }
+
+    /* --- Delete button in branches --- */
+    .btn-delete {
+      background: none; border: 1px solid rgba(255,90,82,0.25);
+      border-radius: 6px; color: var(--red);
+      font-size: 11px; padding: 4px 10px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-delete:hover { background: var(--red-bg); }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--card); border: 1px solid var(--border-bright);
+      border-radius: 10px; padding: 14px 20px;
+      font-size: 13px; color: var(--text-secondary);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease both;
+      z-index: 100;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    /* --- Animations --- */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 600px) {
+      .shell { padding: 16px 12px 40px; }
+      .stat-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .stat-card { padding: 12px 10px; }
+      .stat-count { font-size: 22px; }
+      .header h1 { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    // ─── API Layer ──────────────────────────────────────────────
+    const api = {
+      status:  () => fetch('/api/status').then(r => r.json()),
+      getScan: () => fetch('/api/scan').then(r => r.json()),
+      runScan: () => fetch('/api/scan', { method: 'POST' }).then(r => r.json()),
+      getSummary: () => fetch('/api/summary').then(r => r.json()),
+      sendDigest: () => fetch('/api/digest', { method: 'POST' }).then(r => r.json()),
+      deleteBranch: (owner, repo, branch) => fetch(`/api/branches/${owner}/${repo}/${encodeURIComponent(branch)}`, { method: 'DELETE' }).then(r => r.json()),
+    };
+
+    // ─── Helpers ────────────────────────────────────────────────
+    function timeAgo(d) {
+      if (!d) return '';
+      const hrs = Math.floor((Date.now() - new Date(d).getTime()) / 3600000);
+      if (hrs < 1) return 'just now';
+      if (hrs < 24) return hrs + 'h ago';
+      return Math.floor(hrs / 24) + 'd ago';
+    }
+
+    const SEV_MAP = {
+      critical: 'sev-critical', high: 'sev-high', medium: 'sev-medium',
+      low: 'sev-low', warning: 'sev-warning', unknown: 'sev-medium',
+    };
+
+    const LABEL_COLORS = {
+      P0: '#ff2d20', security: '#ff2d20', bug: '#ff6b2b',
+      feature: '#58a6ff', enhancement: '#58a6ff', architecture: '#a371f7',
+    };
+
+    const TABS = [
+      { key: 'overview', label: 'Overview', icon: '◉' },
+      { key: 'builds', label: 'Builds', icon: '🔴' },
+      { key: 'prs', label: 'PRs', icon: '🔀' },
+      { key: 'security', label: 'Security', icon: '🛡️' },
+      { key: 'tokens', label: 'Tokens', icon: '🔑' },
+      { key: 'issues', label: 'Issues', icon: '🐛' },
+      { key: 'branches', label: 'Branches', icon: '🌿' },
+    ];
+
+    const STAT_COLORS = {
+      builds: '#ff2d20', prs: '#58a6ff', security: '#f0c020',
+      tokens: '#ff6b2b', issues: '#a371f7', branches: '#30a14e',
+    };
+
+    // ─── Sub Components ─────────────────────────────────────────
+    function SevBadge({ severity }) {
+      return <span className={`sev mono ${SEV_MAP[severity] || 'sev-medium'}`}>{(severity || 'unknown').toUpperCase()}</span>;
+    }
+
+    function LabelBadge({ label }) {
+      const c = LABEL_COLORS[label] || '#8b949e';
+      return <span className="label-badge" style={{ color: c, border: `1px solid ${c}50` }}>{label}</span>;
+    }
+
+    function Toast({ message, onClose }) {
+      useEffect(() => {
+        const t = setTimeout(onClose, 4000);
+        return () => clearTimeout(t);
+      }, []);
+      return <div className="toast">{message}</div>;
+    }
+
+    // ─── Panel: Overview ────────────────────────────────────────
+    function OverviewPanel({ data, summary, summaryLoading }) {
+      const topOfMind = summary?.topOfMind || 'Run a scan to generate AI insights.';
+      const actions = summary?.actions || [];
+
+      // Build priority queue from critical items
+      const priorityItems = [];
+      (data.tokens?.items || []).filter(i => i.severity === 'critical').forEach(i => priorityItems.push({ ...i, _cat: '🔑', _sev: 'critical' }));
+      (data.security?.items || []).filter(i => i.severity === 'critical').forEach(i => priorityItems.push({ ...i, _cat: '🛡️', _sev: 'critical' }));
+      (data.security?.items || []).filter(i => i.severity === 'high').forEach(i => priorityItems.push({ ...i, _cat: '🛡️', _sev: 'high' }));
+      (data.issues?.items || []).filter(i => i.isBug).slice(0, 3).forEach(i => priorityItems.push({ ...i, _cat: '🐛', _sev: 'high' }));
+      (data.builds?.items || []).slice(0, 2).forEach(i => priorityItems.push({ ...i, _cat: '🔴', _sev: 'medium' }));
+
+      return (
+        <div>
+          <div className="ai-card" style={{ animation: 'fadeUp 0.4s ease both' }}>
+            <h3>⚡ Top of Mind</h3>
+            <p>{summaryLoading ? <span style={{ color: 'var(--text-dim)' }}>Generating AI summary...</span> : topOfMind}</p>
+          </div>
+
+          <div className="actions-title mono">Priority Queue</div>
+          {priorityItems.length === 0 && (
+            <div style={{ padding: '20px 0', fontSize: 13, color: 'var(--text-dim)' }}>No critical items found.</div>
+          )}
+          {priorityItems.map((item, idx) => (
+            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }}
+              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
+              <span style={{ fontSize: 16, width: 28, textAlign: 'center', flexShrink: 0 }}>{item._cat}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {item.title}
+                </div>
+                <div className="row-sub">{item.repo}</div>
+              </div>
+              <SevBadge severity={item._sev} />
+            </div>
+          ))}
+
+          {actions.length > 0 && (
+            <div className="actions-section">
+              <div className="actions-title mono">Recommended Actions</div>
+              {actions.map((action, idx) => (
+                <div className="action-item" key={idx} style={{ animationDelay: `${0.2 + idx * 0.08}s` }}>
+                  <span className="action-num mono">{idx + 1}</span>
+                  <span className="action-text">{action}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── Panel: Builds ──────────────────────────────────────────
+    function BuildsPanel({ data, insight }) {
+      const items = data.builds?.items || [];
+      return (
+        <div>
+          {insight && <div className="insight">{insight}</div>}
+          {items.length === 0 && <div className="empty"><div className="empty-icon">✅</div><h3>All builds passing</h3></div>}
+          {items.map((item, idx) => (
+            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
+              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
+              <div className="dot" style={{ background: 'var(--red)', boxShadow: '0 0 8px rgba(255,45,32,0.4)' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span className="row-title">{item.repo}</span>
+                  <code>{item.workflow}</code>
+                  <code style={{ color: 'var(--accent)' }}>{item.branch}</code>
+                </div>
+                <div className="row-sub">{item.message}</div>
+              </div>
+              <span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Panel: PRs ─────────────────────────────────────────────
+    function PRsPanel({ data, insight }) {
+      const items = data.prs?.items || [];
+      return (
+        <div>
+          {insight && <div className="insight">{insight}</div>}
+          {items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open PRs</h3></div>}
+          {items.map((item, idx) => (
+            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
+              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
+              <div className="num-badge mono" style={{
+                background: item.draft ? 'var(--border)' : 'var(--green-bg)',
+                color: item.draft ? 'var(--text-dim)' : 'var(--green)',
+              }}>#{item.number}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row-title">
+                  {item.title}
+                  {item.draft && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>draft</span>}
+                </div>
+                <div className="row-sub">
+                  <span>{item.repo}</span><span className="sep">·</span>
+                  <span>{item.ageDays}d old</span>
+                  {(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}
+                </div>
+              </div>
+              <div className="row-right" style={{ fontSize: 11, color: item.reviewCount > 0 ? 'var(--green)' : 'var(--text-dim)' }}>
+                {item.reviewCount > 0 ? `${item.reviewCount} review${item.reviewCount > 1 ? 's' : ''}` : 'No reviews'}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Panel: Security ────────────────────────────────────────
+    function SecurityPanel({ data, insight }) {
+      const items = data.security?.items || [];
+      return (
+        <div>
+          {insight && <div className="insight">{insight}</div>}
+          {items.length === 0 && <div className="empty"><div className="empty-icon">🔒</div><h3>No security alerts</h3></div>}
+          {items.map((item, idx) => (
+            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
+              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
+              <SevBadge severity={item.severity} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row-title">{item.title}</div>
+                <div className="row-sub">
+                  <span>{item.repo}</span><span className="sep">·</span>
+                  <code>{item.package}</code><span className="sep">·</span>
+                  <span>{item.type}</span>
+                </div>
+              </div>
+              <span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Panel: Tokens ──────────────────────────────────────────
+    function TokensPanel({ data, insight }) {
+      const items = data.tokens?.items || [];
+      return (
+        <div>
+          {insight && <div className="insight">{insight}</div>}
+          {items.length === 0 && <div className="empty"><div className="empty-icon">🔐</div><h3>All credentials valid</h3></div>}
+          {items.map((item, idx) => (
+            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
+              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
+              <SevBadge severity={item.severity} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row-title">{item.title}</div>
+                <div className="row-sub">
+                  <span>{item.repo}</span><span className="sep">·</span>
+                  <span>{item.type}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Panel: Issues ──────────────────────────────────────────
+    function IssuesPanel({ data, insight }) {
+      const items = data.issues?.items || [];
+      return (
+        <div>
+          {insight && <div className="insight">{insight}</div>}
+          {items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open issues</h3></div>}
+          {items.map((item, idx) => (
+            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
+              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
+              <div className="num-badge mono" style={{
+                background: item.isBug ? 'var(--orange-bg)' : 'var(--accent-bg)',
+                color: item.isBug ? 'var(--orange)' : 'var(--accent)',
+              }}>#{item.number}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row-title">{item.title}</div>
+                <div className="row-sub">
+                  <span>{item.repo}</span><span className="sep">·</span>
+                  <span>{item.ageDays}d old</span><span className="sep">·</span>
+                  <span>{item.commentCount} 💬</span>
+                  {(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Panel: Branches ────────────────────────────────────────
+    function BranchesPanel({ data, insight, onDeleteBranch }) {
+      const items = data.branches?.items || [];
+      return (
+        <div>
+          {insight && <div className="insight">{insight}</div>}
+          {items.length === 0 && <div className="empty"><div className="empty-icon">🧹</div><h3>No stale branches</h3></div>}
+          {items.map((item, idx) => (
+            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s` }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>🌿</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <code style={{ fontSize: 13, fontWeight: 600 }}>{item.branch}</code>
+                  {item.protected && <span style={{ fontSize: 10, color: 'var(--yellow)', fontWeight: 600 }}>⚠️ PROTECTED</span>}
+                </div>
+                <div className="row-sub">
+                  <span>{item.repo}</span><span className="sep">·</span>
+                  <span>{item.ageDays}d stale</span><span className="sep">·</span>
+                  <span>by {item.author}</span>
+                </div>
+              </div>
+              <button className="btn-delete mono" disabled={item.protected} onClick={(e) => { e.stopPropagation(); if (confirm(`Delete branch "${item.branch}" from ${item.repo}?`)) onDeleteBranch(item); }}>{item.protected ? '🔒' : 'Delete'}</button>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Panel Router ───────────────────────────────────────────
+    const PANELS = {
+      overview: OverviewPanel,
+      builds: BuildsPanel,
+      prs: PRsPanel,
+      security: SecurityPanel,
+      tokens: TokensPanel,
+      issues: IssuesPanel,
+      branches: BranchesPanel,
+    };
+
+    // ─── Main App ───────────────────────────────────────────────
+    function App() {
+      const [data, setData] = useState(null);
+      const [summary, setSummary] = useState(null);
+      const [summaryLoading, setSummaryLoading] = useState(false);
+      const [activeTab, setActiveTab] = useState('overview');
+      const [loading, setLoading] = useState(true);
+      const [scanning, setScanning] = useState(false);
+      const [toast, setToast] = useState(null);
+
+      // Initial load
+      useEffect(() => {
+        api.getScan().then(res => {
+          if (res.status === 'ok') {
+            setData(res.data);
+            // Fetch summary
+            setSummaryLoading(true);
+            api.getSummary().then(s => {
+              if (s.status === 'ok') setSummary(s.data);
+            }).finally(() => setSummaryLoading(false));
+          }
+          setLoading(false);
+        }).catch(() => setLoading(false));
+      }, []);
+
+      const handleScan = useCallback(async () => {
+        setScanning(true);
+        try {
+          const res = await api.runScan();
+          if (res.status === 'ok') {
+            setData(res.data);
+            setToast('✅ Scan complete!');
+            // Refresh summary
+            setSummaryLoading(true);
+            setSummary(null);
+            api.getSummary().then(s => {
+              if (s.status === 'ok') setSummary(s.data);
+            }).finally(() => setSummaryLoading(false));
+          } else {
+            setToast('❌ ' + (res.message || 'Scan failed'));
+          }
+        } catch (err) {
+          setToast('❌ ' + err.message);
+        } finally {
+          setScanning(false);
+        }
+      }, []);
+
+      const handleDigest = useCallback(async () => {
+        setScanning(true);
+        try {
+          const res = await api.sendDigest();
+          if (res.status === 'ok') {
+            setData(res.data);
+            setToast('📧 Digest emailed!');
+          } else {
+            setToast('❌ ' + (res.message || 'Failed'));
+          }
+        } catch (err) {
+          setToast('❌ ' + err.message);
+        } finally {
+          setScanning(false);
+        }
+      }, []);
+
+      const handleDeleteBranch = useCallback(async (item) => {
+        const [owner, repo] = item.repo.split('/');
+        try {
+          const res = await api.deleteBranch(owner, repo, item.branch);
+          if (res.status === 'ok') {
+            setData(prev => ({
+              ...prev,
+              branches: {
+                ...prev.branches,
+                items: prev.branches.items.filter(b => !(b.repo === item.repo && b.branch === item.branch)),
+                count: prev.branches.count - 1,
+              },
+              meta: { ...prev.meta, totalItems: prev.meta.totalItems - 1 },
+            }));
+            setToast('🗑️ Deleted branch "' + item.branch + '"');
+          } else {
+            setToast('❌ ' + (res.message || 'Delete failed'));
+          }
+        } catch (err) {
+          setToast('❌ ' + err.message);
+        }
+      }, []);
+
+      // Loading state
+      if (loading) {
+        return (
+          <div className="shell">
+            <div className="loading-wrap">
+              <div className="spinner" />
+              <div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading dashboard...</div>
+            </div>
+          </div>
+        );
+      }
+
+      // Empty state — no scan yet
+      if (!data) {
+        return (
+          <div className="shell">
+            <div className="header">
+              <div className="header-left">
+                <div className="logo">📊</div>
+                <div>
+                  <h1>GitHub Digest</h1>
+                  <div className="sub mono">Dashboard</div>
+                </div>
+              </div>
+            </div>
+            <div className="empty">
+              <div className="empty-icon">🔍</div>
+              <h3>No scan data yet</h3>
+              <p>Run your first scan to see a full dashboard of your GitHub repos — builds, PRs, security alerts, and more.</p>
+              <button className="btn btn-primary" onClick={handleScan} disabled={scanning}>
+                {scanning ? '⏳ Scanning...' : '🚀 Run First Scan'}
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      const Panel = PANELS[activeTab];
+      const categoryInsights = summary?.categoryInsights || {};
+
+      return (
+        <div className="shell">
+          {/* Header */}
+          <div className="header">
+            <div className="header-left">
+              <div className="logo">📊</div>
+              <div>
+                <h1>GitHub Digest</h1>
+                <div className="sub mono">
+                  {data.meta.reposScanned} repos · {data.meta.totalItems} items · {data.meta.elapsed}
+                </div>
+              </div>
+            </div>
+            <div className="header-actions">
+              <div className="status-row">
+                <div className="status-dot" style={{ background: 'var(--green)', boxShadow: '0 0 8px rgba(48,161,78,0.4)' }} />
+                <span className="mono">Last: {new Date(data.meta.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <button className="btn" onClick={handleScan} disabled={scanning}>
+                {scanning ? '⏳' : '🔄'} {scanning ? 'Scanning...' : 'Rescan'}
+              </button>
+              <button className="btn btn-primary" onClick={handleDigest} disabled={scanning}>
+                📧 Email Digest
+              </button>
+            </div>
+          </div>
+
+          {/* Stat Cards */}
+          <div className="stat-grid">
+            {['builds', 'prs', 'security', 'tokens', 'issues', 'branches'].map((key, idx) => {
+              const cat = data[key];
+              const color = STAT_COLORS[key];
+              return (
+                <div
+                  key={key}
+                  className={`stat-card${activeTab === key ? ' active' : ''}`}
+                  style={{ '--active-color': color, animationDelay: `${idx * 0.05}s`, animation: 'fadeUp 0.4s ease both' }}
+                  onClick={() => setActiveTab(key)}
+                >
+                  <div className="stat-emoji">{cat.emoji}</div>
+                  <div className="stat-count mono" style={{ color: cat.count > 0 ? color : 'var(--text-dim)' }}>
+                    {cat.count}
+                  </div>
+                  <div className="stat-label">{cat.category}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Tabs */}
+          <div className="tabs">
+            {TABS.map(tab => {
+              const count = tab.key !== 'overview' ? data[tab.key]?.count : undefined;
+              return (
+                <button key={tab.key} className={`tab${activeTab === tab.key ? ' active' : ''}`} onClick={() => setActiveTab(tab.key)}>
+                  <span>{tab.icon}</span>
+                  {tab.label}
+                  {count !== undefined && <span className="badge mono">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Panel */}
+          <div className="panel" key={activeTab}>
+            {activeTab === 'overview' ? (
+              <Panel data={data} summary={summary} summaryLoading={summaryLoading} />
+            ) : (
+              <Panel data={data} insight={categoryInsights[activeTab]} onDeleteBranch={handleDeleteBranch} />
+            )}
+          </div>
+
+          {/* Toast */}
+          {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+  </script>
+</body>
+</html>
