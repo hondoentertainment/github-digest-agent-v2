@@ -10,10 +10,19 @@ import { scanOpenIssues } from "./scanners/issues.js";
 import { scanStaleBranches } from "./scanners/branches.js";
 import { generateDigest } from "./services/summarizer.js";
 import { sendDigestEmail } from "./services/mailer.js";
+import { isScannerEnabled } from "./utils/scannerConfig.js";
+
+const SCANNER_REGISTRY = [
+  { key: "builds", fn: scanFailedBuilds, category: "Failed CI/Build Issues", emoji: "🔴" },
+  { key: "prs", fn: scanOpenPRs, category: "Open PRs Needing Review", emoji: "🔀" },
+  { key: "security", fn: scanSecurityAlerts, category: "Security Alerts & Dependabot", emoji: "🛡️" },
+  { key: "tokens", fn: scanExpiredTokens, category: "Expired Tokens & Credentials", emoji: "🔑" },
+  { key: "issues", fn: scanOpenIssues, category: "Open Issues & Bugs", emoji: "🐛" },
+  { key: "branches", fn: scanStaleBranches, category: "Stale Branches", emoji: "🌿" },
+];
 
 /**
- * Run all scanners and return structured results (no email).
- * Used by both the email digest and the web dashboard API.
+ * Run enabled scanners and return structured results.
  */
 export async function runScan() {
   const startTime = Date.now();
@@ -24,15 +33,23 @@ export async function runScan() {
   console.log(`   Found ${repos.length} active repos\n`);
 
   console.log("🔍 Running scanners...");
-  const [builds, prs, security, tokens, issues, branches] = await Promise.all([
-    scanFailedBuilds(repos).then((r) => { console.log(`   ✓ Builds: ${r.count} failures`); return r; }),
-    scanOpenPRs(repos).then((r) => { console.log(`   ✓ PRs: ${r.count} open`); return r; }),
-    scanSecurityAlerts(repos).then((r) => { console.log(`   ✓ Security: ${r.count} alerts`); return r; }),
-    scanExpiredTokens(repos).then((r) => { console.log(`   ✓ Tokens: ${r.count} issues`); return r; }),
-    scanOpenIssues(repos).then((r) => { console.log(`   ✓ Issues: ${r.count} open`); return r; }),
-    scanStaleBranches(repos).then((r) => { console.log(`   ✓ Branches: ${r.count} stale`); return r; }),
-  ]);
+  const results = await Promise.all(
+    SCANNER_REGISTRY.map(({ key, fn, category, emoji }) => {
+      if (!isScannerEnabled(key)) {
+        console.log(`   ⏭️ ${category}: disabled`);
+        return Promise.resolve({
+          category, emoji, count: 0, items: [],
+          summary: `${emoji} ${category} — scanner disabled`,
+        });
+      }
+      return fn(repos).then((r) => {
+        console.log(`   ✓ ${r.category}: ${r.count} items`);
+        return r;
+      });
+    })
+  );
 
+  const [builds, prs, security, tokens, issues, branches] = results;
   const scanResults = { builds, prs, security, tokens, issues, branches };
   const totalItems = Object.values(scanResults).reduce((sum, r) => sum + r.count, 0);
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -67,7 +84,6 @@ export async function runDigest() {
   return result;
 }
 
-// Run if called directly (node src/index.js)
 const isDirectRun = process.argv[1]?.endsWith("index.js");
 if (isDirectRun) {
   runDigest().catch((err) => {

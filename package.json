@@ -1,6 +1,6 @@
 {
   "name": "github-digest-agent",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "AI-powered GitHub digest agent with web dashboard — scans repos, generates Claude-powered summaries, emails digests, and serves a real-time dashboard.",
   "type": "module",
   "scripts": {

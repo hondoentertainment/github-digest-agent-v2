@@ -12,13 +12,13 @@
 - CI/CD via GitHub Actions
 - Docker support
 
-## Short-Term (v2.1)
+## Short-Term (v2.1) — Shipped
 
-- [ ] Persistent scan history (SQLite or JSON file storage)
-- [ ] Dashboard authentication (basic auth or API key)
-- [ ] Configurable scanner selection (enable/disable per scanner)
-- [ ] Scan result diffing (highlight what changed since last scan)
-- [ ] Export scan results as JSON/CSV
+- [x] Persistent scan history (JSON file storage)
+- [x] Dashboard authentication (password / API key)
+- [x] Configurable scanner selection (enable/disable per scanner)
+- [x] Scan result diffing (highlight what changed since last scan)
+- [x] Export scan results as JSON/CSV
 
 ## Medium-Term (v2.2)
 

@@ -33,135 +33,48 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Sans', -apple-system, sans-serif;
-      min-height: 100vh;
-    }
-
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', -apple-system, sans-serif; min-height: 100vh; }
     .mono { font-family: 'JetBrains Mono', monospace; }
+    .shell { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
 
-    /* --- Layout --- */
-    .shell {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 24px 20px 60px;
-    }
-
-    /* --- Header --- */
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-      margin-bottom: 28px;
-      animation: fadeUp 0.4s ease both;
-    }
+    .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; animation: fadeUp 0.4s ease both; }
     .header-left { display: flex; align-items: center; gap: 14px; }
-    .logo {
-      width: 40px; height: 40px; border-radius: 10px;
-      background: linear-gradient(135deg, var(--surface), var(--card));
-      border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-    }
+    .logo { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--surface), var(--card)); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; }
     .header h1 { font-size: 22px; font-weight: 700; }
     .header .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
-    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-    /* --- Buttons --- */
-    .btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
-      background: var(--surface); color: var(--text-secondary);
-      font-size: 13px; font-weight: 500; cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      transition: all 0.2s;
-    }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
     .btn:hover { border-color: var(--border-bright); background: var(--card); color: var(--text); }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-primary { background: var(--accent-bg); border-color: rgba(88,166,255,0.3); color: var(--accent); }
     .btn-primary:hover { background: rgba(88,166,255,0.18); }
+    .btn-sm { padding: 4px 12px; font-size: 11px; }
 
-    /* --- Stat Grid --- */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px 16px;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-      overflow: hidden;
-    }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
     .stat-card:hover { border-color: var(--border-bright); }
     .stat-card.active { border-color: var(--active-color, var(--accent)); }
-    .stat-card.active::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 2px;
-      background: var(--active-color, var(--accent));
-    }
+    .stat-card.active::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--active-color, var(--accent)); }
     .stat-emoji { font-size: 22px; margin-bottom: 6px; }
     .stat-count { font-size: 28px; font-weight: 700; }
     .stat-label { font-size: 12px; color: var(--text-dim); margin-top: 4px; font-weight: 500; }
 
-    /* --- Tabs --- */
-    .tabs {
-      display: flex; gap: 0;
-      border-bottom: 1px solid var(--border);
-      overflow-x: auto;
-      margin-bottom: 0;
-    }
-    .tab {
-      background: none; border: none;
-      padding: 10px 16px;
-      cursor: pointer;
-      font-size: 12px; font-weight: 400;
-      color: var(--text-dim);
-      border-bottom: 2px solid transparent;
-      font-family: 'DM Sans', sans-serif;
-      display: flex; align-items: center; gap: 6px;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); overflow-x: auto; margin-bottom: 0; }
+    .tab { background: none; border: none; padding: 10px 16px; cursor: pointer; font-size: 12px; font-weight: 400; color: var(--text-dim); border-bottom: 2px solid transparent; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.2s; }
     .tab:hover { color: var(--text-secondary); }
     .tab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
-    .tab .badge {
-      padding: 1px 6px; border-radius: 10px;
-      font-size: 10px; font-weight: 600;
-      background: var(--code-bg); color: var(--text-dim);
-    }
+    .tab .badge { padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; background: var(--code-bg); color: var(--text-dim); }
     .tab.active .badge { background: var(--accent-bg); color: var(--accent); }
 
-    /* --- Panel --- */
     .panel { padding: 20px 0; min-height: 200px; }
-
-    /* --- Rows --- */
-    .row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.15s;
-      font-size: 13px;
-      animation: fadeUp 0.3s ease both;
-    }
+    .row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background 0.15s; font-size: 13px; animation: fadeUp 0.3s ease both; }
     .row:hover { background: var(--row-hover); }
     .row-title { font-weight: 500; color: var(--text); }
     .row-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .row-sub .sep { color: var(--border); }
     .row-right { flex-shrink: 0; text-align: right; }
 
-    /* --- Badges --- */
     .sev { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; }
     .sev-critical { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,45,32,0.25); }
     .sev-high { background: var(--orange-bg); color: var(--orange); border: 1px solid rgba(255,107,43,0.25); }
@@ -169,129 +82,78 @@
     .sev-low { background: var(--green-bg); color: var(--green); border: 1px solid rgba(48,161,78,0.25); }
     .sev-warning { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(240,192,32,0.25); }
 
-    .label-badge {
-      display: inline-block; padding: 1px 7px; border-radius: 12px;
-      font-size: 11px; font-weight: 500; margin-right: 4px;
-    }
-
+    .label-badge { display: inline-block; padding: 1px 7px; border-radius: 12px; font-size: 11px; font-weight: 500; margin-right: 4px; }
     .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .num-badge {
-      width: 28px; height: 28px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; flex-shrink: 0;
-    }
+    .num-badge { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
 
-    code, .code {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      background: var(--code-bg);
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: var(--text-secondary);
-    }
+    code, .code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: var(--code-bg); padding: 2px 6px; border-radius: 4px; color: var(--text-secondary); }
 
-    /* --- AI Summary Card --- */
-    .ai-card {
-      background: linear-gradient(135deg, var(--red-bg), var(--orange-bg));
-      border: 1px solid rgba(255,45,32,0.18);
-      border-radius: 10px;
-      padding: 20px 24px;
-      margin-bottom: 24px;
-    }
+    .ai-card { background: linear-gradient(135deg, var(--red-bg), var(--orange-bg)); border: 1px solid rgba(255,45,32,0.18); border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; }
     .ai-card h3 { display: flex; align-items: center; gap: 10px; font-size: 15px; margin-bottom: 8px; }
     .ai-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
 
     .actions-section { margin-top: 28px; }
     .actions-title { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; }
-    .action-item {
-      display: flex; gap: 10px; padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      animation: fadeUp 0.3s ease both;
-    }
+    .action-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); animation: fadeUp 0.3s ease both; }
     .action-item:last-child { border-bottom: none; }
-    .action-num {
-      width: 22px; height: 22px; border-radius: 6px;
-      background: var(--accent-bg); color: var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; flex-shrink: 0;
-    }
+    .action-num { width: 22px; height: 22px; border-radius: 6px; background: var(--accent-bg); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
     .action-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 
-    /* --- Category Insight --- */
-    .insight {
-      padding: 10px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: 16px;
-      line-height: 1.5;
-    }
+    .insight { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
     .insight::before { content: '💡 '; }
 
-    /* --- Loading --- */
-    .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
-    }
-    .loading-wrap {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; min-height: 300px;
-    }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; }
 
-    /* --- Empty State --- */
-    .empty {
-      text-align: center; padding: 48px 20px;
-      color: var(--text-dim);
-    }
+    .empty { text-align: center; padding: 48px 20px; color: var(--text-dim); }
     .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
     .empty h3 { font-size: 16px; color: var(--text-secondary); margin-bottom: 8px; }
     .empty p { font-size: 13px; max-width: 400px; margin: 0 auto 20px; line-height: 1.6; }
 
-    /* --- Status dot --- */
-    .status-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      animation: pulse 2s ease infinite;
-    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s ease infinite; }
     .status-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-dim); }
 
-    /* --- Delete button in branches --- */
-    .btn-delete {
-      background: none; border: 1px solid rgba(255,90,82,0.25);
-      border-radius: 6px; color: var(--red);
-      font-size: 11px; padding: 4px 10px; cursor: pointer;
-      transition: all 0.2s;
-    }
+    .btn-delete { background: none; border: 1px solid rgba(255,90,82,0.25); border-radius: 6px; color: var(--red); font-size: 11px; padding: 4px 10px; cursor: pointer; transition: all 0.2s; }
     .btn-delete:hover { background: var(--red-bg); }
 
-    /* --- Toast --- */
-    .toast {
-      position: fixed; bottom: 24px; right: 24px;
-      background: var(--card); border: 1px solid var(--border-bright);
-      border-radius: 10px; padding: 14px 20px;
-      font-size: 13px; color: var(--text-secondary);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-      animation: slideIn 0.3s ease both;
-      z-index: 100;
-      display: flex; align-items: center; gap: 10px;
-    }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--border-bright); border-radius: 10px; padding: 14px 20px; font-size: 13px; color: var(--text-secondary); box-shadow: 0 8px 32px rgba(0,0,0,0.4); animation: slideIn 0.3s ease both; z-index: 100; display: flex; align-items: center; gap: 10px; }
 
-    /* --- Animations --- */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    /* --- Login --- */
+    .login-overlay { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+    .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px; animation: fadeUp 0.4s ease both; text-align: center; }
+    .login-box h2 { font-size: 20px; margin-bottom: 6px; }
+    .login-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; }
+    .login-input { width: 100%; padding: 10px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
+    .login-input:focus { border-color: var(--accent); }
+    .login-error { font-size: 12px; color: var(--red); margin-bottom: 12px; }
+
+    /* --- Popover / Dropdown --- */
+    .popover { position: absolute; top: 100%; right: 0; margin-top: 8px; background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 16px 20px; min-width: 240px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 50; animation: fadeUp 0.2s ease both; }
+    .popover-title { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 13px; }
+    .toggle-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-secondary); }
+    .toggle-switch { width: 36px; height: 20px; border-radius: 10px; background: var(--border); position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+    .toggle-switch.on { background: var(--accent); }
+    .toggle-switch::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: transform 0.2s; }
+    .toggle-switch.on::after { transform: translateX(16px); }
+
+    .dropdown { position: absolute; top: 100%; right: 0; margin-top: 8px; background: var(--surface); border: 1px solid var(--border-bright); border-radius: 10px; overflow: hidden; min-width: 160px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 50; animation: fadeUp 0.2s ease both; }
+    .dropdown-item { display: block; width: 100%; padding: 10px 16px; font-size: 13px; color: var(--text-secondary); background: none; border: none; text-align: left; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+    .dropdown-item:hover { background: var(--card); color: var(--text); }
+    .dropdown-item + .dropdown-item { border-top: 1px solid var(--border); }
+
+    /* --- Diff --- */
+    .diff-badge { display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; margin-left: 4px; }
+    .diff-new { background: var(--red-bg); color: var(--red); }
+    .diff-resolved { background: var(--green-bg); color: var(--green); }
+
+    /* --- History banner --- */
+    .history-banner { background: var(--yellow-bg); border: 1px solid rgba(240,192,32,0.25); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--yellow); }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 
     @media (max-width: 600px) {
       .shell { padding: 16px 12px 40px; }
@@ -310,36 +172,47 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 
   <script type="text/babel">
-    const { useState, useEffect, useCallback } = React;
+    const { useState, useEffect, useCallback, useRef } = React;
 
-    // ─── API Layer ──────────────────────────────────────────────
-    const api = {
-      status:  () => fetch('/api/status').then(r => r.json()),
-      getScan: () => fetch('/api/scan').then(r => r.json()),
-      runScan: () => fetch('/api/scan', { method: 'POST' }).then(r => r.json()),
-      getSummary: () => fetch('/api/summary').then(r => r.json()),
-      sendDigest: () => fetch('/api/digest', { method: 'POST' }).then(r => r.json()),
-      deleteBranch: (owner, repo, branch) => fetch(`/api/branches/${owner}/${repo}/${encodeURIComponent(branch)}`, { method: 'DELETE' }).then(r => r.json()),
-    };
+    // ─── Auth Token ──────────────────────────────────────────────
+    let authToken = sessionStorage.getItem('digest_auth') || '';
+    function setAuthToken(t) { authToken = t; sessionStorage.setItem('digest_auth', t); }
+    function clearAuthToken() { authToken = ''; sessionStorage.removeItem('digest_auth'); }
+    const apiHeaders = () => authToken ? { 'x-api-key': authToken } : {};
 
-    // ─── Helpers ────────────────────────────────────────────────
-    function timeAgo(d) {
-      if (!d) return '';
-      const hrs = Math.floor((Date.now() - new Date(d).getTime()) / 3600000);
-      if (hrs < 1) return 'just now';
-      if (hrs < 24) return hrs + 'h ago';
-      return Math.floor(hrs / 24) + 'd ago';
+    // ─── Download Helper ─────────────────────────────────────────
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
     }
 
-    const SEV_MAP = {
-      critical: 'sev-critical', high: 'sev-high', medium: 'sev-medium',
-      low: 'sev-low', warning: 'sev-warning', unknown: 'sev-medium',
+    // ─── API Layer ───────────────────────────────────────────────
+    const api = {
+      checkAuth: () => fetch('/api/auth').then(r => r.json()),
+      login: (pw) => fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) }).then(r => r.json()),
+      status: () => fetch('/api/status', { headers: apiHeaders() }).then(r => r.json()),
+      getScan: () => fetch('/api/scan', { headers: apiHeaders() }).then(r => r.json()),
+      runScan: () => fetch('/api/scan', { method: 'POST', headers: apiHeaders() }).then(r => r.json()),
+      getSummary: () => fetch('/api/summary', { headers: apiHeaders() }).then(r => r.json()),
+      sendDigest: () => fetch('/api/digest', { method: 'POST', headers: apiHeaders() }).then(r => r.json()),
+      deleteBranch: (o, r, b) => fetch(`/api/branches/${o}/${r}/${encodeURIComponent(b)}`, { method: 'DELETE', headers: apiHeaders() }).then(r => r.json()),
+      getHistory: () => fetch('/api/history', { headers: apiHeaders() }).then(r => r.json()),
+      loadScan: (id) => fetch(`/api/history/${id}`, { headers: apiHeaders() }).then(r => r.json()),
+      getConfig: () => fetch('/api/config/scanners', { headers: apiHeaders() }).then(r => r.json()),
+      setConfig: (scanners) => fetch('/api/config/scanners', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ scanners }) }).then(r => r.json()),
+      exportJson: async () => { const res = await fetch('/api/export/json', { headers: apiHeaders() }); const blob = await res.blob(); downloadBlob(blob, `github-digest-${new Date().toISOString().slice(0,10)}.json`); },
+      exportCsv: async () => { const res = await fetch('/api/export/csv', { headers: apiHeaders() }); const blob = await res.blob(); downloadBlob(blob, `github-digest-${new Date().toISOString().slice(0,10)}.csv`); },
     };
 
-    const LABEL_COLORS = {
-      P0: '#ff2d20', security: '#ff2d20', bug: '#ff6b2b',
-      feature: '#58a6ff', enhancement: '#58a6ff', architecture: '#a371f7',
-    };
+    // ─── Helpers ─────────────────────────────────────────────────
+    function timeAgo(d) { if (!d) return ''; const hrs = Math.floor((Date.now() - new Date(d).getTime()) / 3600000); if (hrs < 1) return 'just now'; if (hrs < 24) return hrs + 'h ago'; return Math.floor(hrs / 24) + 'd ago'; }
+    const SEV_MAP = { critical: 'sev-critical', high: 'sev-high', medium: 'sev-medium', low: 'sev-low', warning: 'sev-warning', unknown: 'sev-medium' };
+    const LABEL_COLORS = { P0: '#ff2d20', security: '#ff2d20', bug: '#ff6b2b', feature: '#58a6ff', enhancement: '#58a6ff', architecture: '#a371f7' };
+    const STAT_COLORS = { builds: '#ff2d20', prs: '#58a6ff', security: '#f0c020', tokens: '#ff6b2b', issues: '#a371f7', branches: '#30a14e' };
+    const SCANNER_ICONS = { builds: '🔴', prs: '🔀', security: '🛡️', tokens: '🔑', issues: '🐛', branches: '🌿' };
 
     const TABS = [
       { key: 'overview', label: 'Overview', icon: '◉' },
@@ -349,37 +222,67 @@
       { key: 'tokens', label: 'Tokens', icon: '🔑' },
       { key: 'issues', label: 'Issues', icon: '🐛' },
       { key: 'branches', label: 'Branches', icon: '🌿' },
+      { key: 'history', label: 'History', icon: '📜' },
     ];
 
-    const STAT_COLORS = {
-      builds: '#ff2d20', prs: '#58a6ff', security: '#f0c020',
-      tokens: '#ff6b2b', issues: '#a371f7', branches: '#30a14e',
-    };
+    // ─── Small Components ────────────────────────────────────────
+    function SevBadge({ severity }) { return <span className={`sev mono ${SEV_MAP[severity] || 'sev-medium'}`}>{(severity || 'unknown').toUpperCase()}</span>; }
+    function LabelBadge({ label }) { const c = LABEL_COLORS[label] || '#8b949e'; return <span className="label-badge" style={{ color: c, border: `1px solid ${c}50` }}>{label}</span>; }
+    function Toast({ message, onClose }) { useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, []); return <div className="toast">{message}</div>; }
 
-    // ─── Sub Components ─────────────────────────────────────────
-    function SevBadge({ severity }) {
-      return <span className={`sev mono ${SEV_MAP[severity] || 'sev-medium'}`}>{(severity || 'unknown').toUpperCase()}</span>;
+    // ─── Login Screen ────────────────────────────────────────────
+    function LoginScreen({ onLogin }) {
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const [busy, setBusy] = useState(false);
+      const handleSubmit = async (e) => {
+        e.preventDefault(); setBusy(true); setError('');
+        try {
+          const res = await api.login(password);
+          if (res.status === 'ok') { setAuthToken(password); onLogin(); }
+          else setError(res.message || 'Invalid password');
+        } catch { setError('Connection failed'); }
+        finally { setBusy(false); }
+      };
+      return (
+        <div className="login-overlay">
+          <div className="login-box">
+            <div className="logo" style={{ margin: '0 auto 20px', width: 56, height: 56, fontSize: 28, borderRadius: 14 }}>📊</div>
+            <h2>GitHub Digest</h2>
+            <div className="login-sub">Enter your dashboard password to continue.</div>
+            <form onSubmit={handleSubmit}>
+              <input type="password" className="login-input" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
+              {error && <div className="login-error">{error}</div>}
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={busy}>{busy ? 'Verifying...' : 'Sign In'}</button>
+            </form>
+          </div>
+        </div>
+      );
     }
 
-    function LabelBadge({ label }) {
-      const c = LABEL_COLORS[label] || '#8b949e';
-      return <span className="label-badge" style={{ color: c, border: `1px solid ${c}50` }}>{label}</span>;
+    // ─── Settings Popover ────────────────────────────────────────
+    function SettingsPopover({ config, onToggle, onClose }) {
+      const ref = useRef();
+      useEffect(() => { const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
+      const all = config?.all || [];
+      const enabled = new Set(config?.enabled || []);
+      return (
+        <div className="popover" ref={ref}>
+          <div className="popover-title">Scanner Selection</div>
+          {all.map(name => (
+            <div className="toggle-row" key={name}>
+              <label><span>{SCANNER_ICONS[name]}</span><span>{name}</span></label>
+              <div className={`toggle-switch ${enabled.has(name) ? 'on' : ''}`} onClick={() => onToggle(name, !enabled.has(name))} />
+            </div>
+          ))}
+        </div>
+      );
     }
 
-    function Toast({ message, onClose }) {
-      useEffect(() => {
-        const t = setTimeout(onClose, 4000);
-        return () => clearTimeout(t);
-      }, []);
-      return <div className="toast">{message}</div>;
-    }
-
-    // ─── Panel: Overview ────────────────────────────────────────
-    function OverviewPanel({ data, summary, summaryLoading }) {
+    // ─── Panel: Overview ─────────────────────────────────────────
+    function OverviewPanel({ data, summary, summaryLoading, diff }) {
       const topOfMind = summary?.topOfMind || 'Run a scan to generate AI insights.';
       const actions = summary?.actions || [];
-
-      // Build priority queue from critical items
       const priorityItems = [];
       (data.tokens?.items || []).filter(i => i.severity === 'critical').forEach(i => priorityItems.push({ ...i, _cat: '🔑', _sev: 'critical' }));
       (data.security?.items || []).filter(i => i.severity === 'critical').forEach(i => priorityItems.push({ ...i, _cat: '🛡️', _sev: 'critical' }));
@@ -390,342 +293,185 @@
       return (
         <div>
           <div className="ai-card" style={{ animation: 'fadeUp 0.4s ease both' }}>
-            <h3>⚡ Top of Mind</h3>
+            <h3>⚡ Top of Mind {diff?.summary && <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-dim)' }}>({diff.summary.totalNew} new, {diff.summary.totalResolved} resolved)</span>}</h3>
             <p>{summaryLoading ? <span style={{ color: 'var(--text-dim)' }}>Generating AI summary...</span> : topOfMind}</p>
           </div>
-
           <div className="actions-title mono">Priority Queue</div>
-          {priorityItems.length === 0 && (
-            <div style={{ padding: '20px 0', fontSize: 13, color: 'var(--text-dim)' }}>No critical items found.</div>
-          )}
+          {priorityItems.length === 0 && <div style={{ padding: '20px 0', fontSize: 13, color: 'var(--text-dim)' }}>No critical items found.</div>}
           {priorityItems.map((item, idx) => (
-            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }}
-              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
+            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
               <span style={{ fontSize: 16, width: 28, textAlign: 'center', flexShrink: 0 }}>{item._cat}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {item.title}
-                </div>
-                <div className="row-sub">{item.repo}</div>
-              </div>
+              <div style={{ flex: 1, minWidth: 0 }}><div className="row-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div><div className="row-sub">{item.repo}</div></div>
               <SevBadge severity={item._sev} />
             </div>
           ))}
-
           {actions.length > 0 && (
             <div className="actions-section">
               <div className="actions-title mono">Recommended Actions</div>
-              {actions.map((action, idx) => (
-                <div className="action-item" key={idx} style={{ animationDelay: `${0.2 + idx * 0.08}s` }}>
-                  <span className="action-num mono">{idx + 1}</span>
-                  <span className="action-text">{action}</span>
-                </div>
-              ))}
+              {actions.map((action, idx) => (<div className="action-item" key={idx} style={{ animationDelay: `${0.2 + idx * 0.08}s` }}><span className="action-num mono">{idx + 1}</span><span className="action-text">{action}</span></div>))}
             </div>
           )}
         </div>
       );
     }
 
-    // ─── Panel: Builds ──────────────────────────────────────────
+    // ─── Panel: Builds ───────────────────────────────────────────
     function BuildsPanel({ data, insight }) {
       const items = data.builds?.items || [];
-      return (
-        <div>
-          {insight && <div className="insight">{insight}</div>}
-          {items.length === 0 && <div className="empty"><div className="empty-icon">✅</div><h3>All builds passing</h3></div>}
-          {items.map((item, idx) => (
-            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
-              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
-              <div className="dot" style={{ background: 'var(--red)', boxShadow: '0 0 8px rgba(255,45,32,0.4)' }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span className="row-title">{item.repo}</span>
-                  <code>{item.workflow}</code>
-                  <code style={{ color: 'var(--accent)' }}>{item.branch}</code>
-                </div>
-                <div className="row-sub">{item.message}</div>
-              </div>
-              <span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span>
-            </div>
-          ))}
-        </div>
-      );
+      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">✅</div><h3>All builds passing</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="dot" style={{ background: 'var(--red)', boxShadow: '0 0 8px rgba(255,45,32,0.4)' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><span className="row-title">{item.repo}</span><code>{item.workflow}</code><code style={{ color: 'var(--accent)' }}>{item.branch}</code></div><div className="row-sub">{item.message}</div></div><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>);
     }
 
-    // ─── Panel: PRs ─────────────────────────────────────────────
+    // ─── Panel: PRs ──────────────────────────────────────────────
     function PRsPanel({ data, insight }) {
       const items = data.prs?.items || [];
-      return (
-        <div>
-          {insight && <div className="insight">{insight}</div>}
-          {items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open PRs</h3></div>}
-          {items.map((item, idx) => (
-            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
-              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
-              <div className="num-badge mono" style={{
-                background: item.draft ? 'var(--border)' : 'var(--green-bg)',
-                color: item.draft ? 'var(--text-dim)' : 'var(--green)',
-              }}>#{item.number}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row-title">
-                  {item.title}
-                  {item.draft && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>draft</span>}
-                </div>
-                <div className="row-sub">
-                  <span>{item.repo}</span><span className="sep">·</span>
-                  <span>{item.ageDays}d old</span>
-                  {(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}
-                </div>
-              </div>
-              <div className="row-right" style={{ fontSize: 11, color: item.reviewCount > 0 ? 'var(--green)' : 'var(--text-dim)' }}>
-                {item.reviewCount > 0 ? `${item.reviewCount} review${item.reviewCount > 1 ? 's' : ''}` : 'No reviews'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
+      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open PRs</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.draft ? 'var(--border)' : 'var(--green-bg)', color: item.draft ? 'var(--text-dim)' : 'var(--green)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}{item.draft && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>draft</span>}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div><div className="row-right" style={{ fontSize: 11, color: item.reviewCount > 0 ? 'var(--green)' : 'var(--text-dim)' }}>{item.reviewCount > 0 ? `${item.reviewCount} review${item.reviewCount > 1 ? 's' : ''}` : 'No reviews'}</div></div>))}</div>);
     }
 
-    // ─── Panel: Security ────────────────────────────────────────
+    // ─── Panel: Security ─────────────────────────────────────────
     function SecurityPanel({ data, insight }) {
       const items = data.security?.items || [];
-      return (
-        <div>
-          {insight && <div className="insight">{insight}</div>}
-          {items.length === 0 && <div className="empty"><div className="empty-icon">🔒</div><h3>No security alerts</h3></div>}
-          {items.map((item, idx) => (
-            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
-              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
-              <SevBadge severity={item.severity} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row-title">{item.title}</div>
-                <div className="row-sub">
-                  <span>{item.repo}</span><span className="sep">·</span>
-                  <code>{item.package}</code><span className="sep">·</span>
-                  <span>{item.type}</span>
-                </div>
-              </div>
-              <span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span>
-            </div>
-          ))}
-        </div>
-      );
+      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔒</div><h3>No security alerts</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><code>{item.package}</code><span className="sep">·</span><span>{item.type}</span></div></div><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>);
     }
 
-    // ─── Panel: Tokens ──────────────────────────────────────────
+    // ─── Panel: Tokens ───────────────────────────────────────────
     function TokensPanel({ data, insight }) {
       const items = data.tokens?.items || [];
-      return (
-        <div>
-          {insight && <div className="insight">{insight}</div>}
-          {items.length === 0 && <div className="empty"><div className="empty-icon">🔐</div><h3>All credentials valid</h3></div>}
-          {items.map((item, idx) => (
-            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
-              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
-              <SevBadge severity={item.severity} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row-title">{item.title}</div>
-                <div className="row-sub">
-                  <span>{item.repo}</span><span className="sep">·</span>
-                  <span>{item.type}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
+      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔐</div><h3>All credentials valid</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.type}</span></div></div></div>))}</div>);
     }
 
-    // ─── Panel: Issues ──────────────────────────────────────────
+    // ─── Panel: Issues ───────────────────────────────────────────
     function IssuesPanel({ data, insight }) {
       const items = data.issues?.items || [];
-      return (
-        <div>
-          {insight && <div className="insight">{insight}</div>}
-          {items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open issues</h3></div>}
-          {items.map((item, idx) => (
-            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }}
-              onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}>
-              <div className="num-badge mono" style={{
-                background: item.isBug ? 'var(--orange-bg)' : 'var(--accent-bg)',
-                color: item.isBug ? 'var(--orange)' : 'var(--accent)',
-              }}>#{item.number}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row-title">{item.title}</div>
-                <div className="row-sub">
-                  <span>{item.repo}</span><span className="sep">·</span>
-                  <span>{item.ageDays}d old</span><span className="sep">·</span>
-                  <span>{item.commentCount} 💬</span>
-                  {(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
+      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open issues</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.isBug ? 'var(--orange-bg)' : 'var(--accent-bg)', color: item.isBug ? 'var(--orange)' : 'var(--accent)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span><span className="sep">·</span><span>{item.commentCount} 💬</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div></div>))}</div>);
     }
 
-    // ─── Panel: Branches ────────────────────────────────────────
+    // ─── Panel: Branches ─────────────────────────────────────────
     function BranchesPanel({ data, insight, onDeleteBranch }) {
       const items = data.branches?.items || [];
+      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🧹</div><h3>No stale branches</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s` }}><span style={{ fontSize: 16, flexShrink: 0 }}>🌿</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><code style={{ fontSize: 13, fontWeight: 600 }}>{item.branch}</code>{item.protected && <span style={{ fontSize: 10, color: 'var(--yellow)', fontWeight: 600 }}>⚠️ PROTECTED</span>}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d stale</span><span className="sep">·</span><span>by {item.author}</span></div></div><button className="btn-delete mono" disabled={item.protected} onClick={(e) => { e.stopPropagation(); if (confirm(`Delete branch "${item.branch}" from ${item.repo}?`)) onDeleteBranch(item); }}>{item.protected ? '🔒' : 'Delete'}</button></div>))}</div>);
+    }
+
+    // ─── Panel: History ──────────────────────────────────────────
+    function HistoryPanel({ onLoadScan }) {
+      const [history, setHistory] = useState([]);
+      const [busy, setBusy] = useState(true);
+      useEffect(() => { api.getHistory().then(r => { if (r.status === 'ok') setHistory(r.data); setBusy(false); }).catch(() => setBusy(false)); }, []);
+      if (busy) return <div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading history...</div></div>;
+      if (history.length === 0) return <div className="empty"><div className="empty-icon">📜</div><h3>No scan history</h3><p>Run your first scan to start building history.</p></div>;
       return (
         <div>
-          {insight && <div className="insight">{insight}</div>}
-          {items.length === 0 && <div className="empty"><div className="empty-icon">🧹</div><h3>No stale branches</h3></div>}
-          {items.map((item, idx) => (
-            <div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s` }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>🌿</span>
+          {history.map((entry, idx) => (
+            <div className="row" key={entry.id} style={{ animationDelay: `${idx * 0.03}s`, cursor: 'pointer' }} onClick={() => onLoadScan(entry.id)}>
+              <div className="num-badge mono" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 10, width: 32, height: 32 }}>#{history.length - idx}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <code style={{ fontSize: 13, fontWeight: 600 }}>{item.branch}</code>
-                  {item.protected && <span style={{ fontSize: 10, color: 'var(--yellow)', fontWeight: 600 }}>⚠️ PROTECTED</span>}
-                </div>
-                <div className="row-sub">
-                  <span>{item.repo}</span><span className="sep">·</span>
-                  <span>{item.ageDays}d stale</span><span className="sep">·</span>
-                  <span>by {item.author}</span>
-                </div>
+                <div className="row-title">{new Date(entry.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                <div className="row-sub"><span>{entry.reposScanned} repos</span><span className="sep">·</span><span>{entry.totalItems} items</span><span className="sep">·</span><span>{entry.elapsed}</span></div>
               </div>
-              <button className="btn-delete mono" disabled={item.protected} onClick={(e) => { e.stopPropagation(); if (confirm(`Delete branch "${item.branch}" from ${item.repo}?`)) onDeleteBranch(item); }}>{item.protected ? '🔒' : 'Delete'}</button>
+              <span className="btn btn-sm">Load</span>
             </div>
           ))}
         </div>
       );
     }
 
-    // ─── Panel Router ───────────────────────────────────────────
-    const PANELS = {
-      overview: OverviewPanel,
-      builds: BuildsPanel,
-      prs: PRsPanel,
-      security: SecurityPanel,
-      tokens: TokensPanel,
-      issues: IssuesPanel,
-      branches: BranchesPanel,
-    };
+    // ─── Panel Router ────────────────────────────────────────────
+    const PANELS = { overview: OverviewPanel, builds: BuildsPanel, prs: PRsPanel, security: SecurityPanel, tokens: TokensPanel, issues: IssuesPanel, branches: BranchesPanel, history: HistoryPanel };
 
-    // ─── Main App ───────────────────────────────────────────────
+    // ─── Main App ────────────────────────────────────────────────
     function App() {
+      const [authRequired, setAuthRequired] = useState(null);
+      const [authenticated, setAuthenticated] = useState(false);
       const [data, setData] = useState(null);
       const [summary, setSummary] = useState(null);
       const [summaryLoading, setSummaryLoading] = useState(false);
+      const [diff, setDiff] = useState(null);
+      const [viewingHistorical, setViewingHistorical] = useState(false);
       const [activeTab, setActiveTab] = useState('overview');
       const [loading, setLoading] = useState(true);
       const [scanning, setScanning] = useState(false);
       const [toast, setToast] = useState(null);
+      const [settingsOpen, setSettingsOpen] = useState(false);
+      const [exportOpen, setExportOpen] = useState(false);
+      const [scannerConfig, setScannerConfig] = useState(null);
 
-      // Initial load
       useEffect(() => {
-        api.getScan().then(res => {
-          if (res.status === 'ok') {
-            setData(res.data);
-            // Fetch summary
-            setSummaryLoading(true);
-            api.getSummary().then(s => {
-              if (s.status === 'ok') setSummary(s.data);
-            }).finally(() => setSummaryLoading(false));
-          }
-          setLoading(false);
-        }).catch(() => setLoading(false));
+        api.checkAuth().then(res => {
+          if (res.enabled) {
+            setAuthRequired(true);
+            if (authToken) {
+              api.status().then(s => { if (s.status === 'ok') setAuthenticated(true); else clearAuthToken(); }).catch(() => clearAuthToken());
+            }
+          } else { setAuthRequired(false); setAuthenticated(true); }
+        }).catch(() => { setAuthRequired(false); setAuthenticated(true); });
       }, []);
 
+      useEffect(() => {
+        if (!authenticated) return;
+        api.getScan().then(res => {
+          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setSummaryLoading(true); api.getSummary().then(s => { if (s.status === 'ok') setSummary(s.data); }).finally(() => setSummaryLoading(false)); }
+          setLoading(false);
+        }).catch(() => setLoading(false));
+        api.getConfig().then(res => { if (res.status === 'ok') setScannerConfig(res.data); });
+      }, [authenticated]);
+
       const handleScan = useCallback(async () => {
-        setScanning(true);
+        setScanning(true); setViewingHistorical(false);
         try {
           const res = await api.runScan();
-          if (res.status === 'ok') {
-            setData(res.data);
-            setToast('✅ Scan complete!');
-            // Refresh summary
-            setSummaryLoading(true);
-            setSummary(null);
-            api.getSummary().then(s => {
-              if (s.status === 'ok') setSummary(s.data);
-            }).finally(() => setSummaryLoading(false));
-          } else {
-            setToast('❌ ' + (res.message || 'Scan failed'));
-          }
-        } catch (err) {
-          setToast('❌ ' + err.message);
-        } finally {
-          setScanning(false);
-        }
+          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setToast('✅ Scan complete!'); setSummaryLoading(true); setSummary(null); api.getSummary().then(s => { if (s.status === 'ok') setSummary(s.data); }).finally(() => setSummaryLoading(false)); }
+          else setToast('❌ ' + (res.message || 'Scan failed'));
+        } catch (err) { setToast('❌ ' + err.message); }
+        finally { setScanning(false); }
       }, []);
 
       const handleDigest = useCallback(async () => {
-        setScanning(true);
+        setScanning(true); setViewingHistorical(false);
         try {
           const res = await api.sendDigest();
-          if (res.status === 'ok') {
-            setData(res.data);
-            setToast('📧 Digest emailed!');
-          } else {
-            setToast('❌ ' + (res.message || 'Failed'));
-          }
-        } catch (err) {
-          setToast('❌ ' + err.message);
-        } finally {
-          setScanning(false);
-        }
+          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setToast('📧 Digest emailed!'); }
+          else setToast('❌ ' + (res.message || 'Failed'));
+        } catch (err) { setToast('❌ ' + err.message); }
+        finally { setScanning(false); }
       }, []);
 
       const handleDeleteBranch = useCallback(async (item) => {
         const [owner, repo] = item.repo.split('/');
         try {
           const res = await api.deleteBranch(owner, repo, item.branch);
-          if (res.status === 'ok') {
-            setData(prev => ({
-              ...prev,
-              branches: {
-                ...prev.branches,
-                items: prev.branches.items.filter(b => !(b.repo === item.repo && b.branch === item.branch)),
-                count: prev.branches.count - 1,
-              },
-              meta: { ...prev.meta, totalItems: prev.meta.totalItems - 1 },
-            }));
-            setToast('🗑️ Deleted branch "' + item.branch + '"');
-          } else {
-            setToast('❌ ' + (res.message || 'Delete failed'));
-          }
-        } catch (err) {
-          setToast('❌ ' + err.message);
-        }
+          if (res.status === 'ok') { setData(prev => ({ ...prev, branches: { ...prev.branches, items: prev.branches.items.filter(b => !(b.repo === item.repo && b.branch === item.branch)), count: prev.branches.count - 1 }, meta: { ...prev.meta, totalItems: prev.meta.totalItems - 1 } })); setToast('🗑️ Deleted branch "' + item.branch + '"'); }
+          else setToast('❌ ' + (res.message || 'Delete failed'));
+        } catch (err) { setToast('❌ ' + err.message); }
       }, []);
 
-      // Loading state
-      if (loading) {
-        return (
-          <div className="shell">
-            <div className="loading-wrap">
-              <div className="spinner" />
-              <div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading dashboard...</div>
-            </div>
-          </div>
-        );
-      }
+      const handleToggleScanner = useCallback(async (name, enabled) => {
+        const current = scannerConfig?.enabled || [];
+        const updated = enabled ? [...current, name] : current.filter(s => s !== name);
+        try { const res = await api.setConfig(updated); if (res.status === 'ok') setScannerConfig(prev => ({ ...prev, enabled: res.data.enabled })); }
+        catch (err) { setToast('❌ ' + err.message); }
+      }, [scannerConfig]);
 
-      // Empty state — no scan yet
+      const handleLoadHistorical = useCallback(async (id) => {
+        try {
+          const res = await api.loadScan(id);
+          if (res.status === 'ok') { setData(res.data); setDiff(null); setSummary(null); setViewingHistorical(true); setActiveTab('overview'); setToast('📜 Loaded historical scan'); }
+          else setToast('❌ ' + (res.message || 'Failed'));
+        } catch (err) { setToast('❌ ' + err.message); }
+      }, []);
+
+      const handleBackToLatest = useCallback(() => {
+        setViewingHistorical(false); setLoading(true);
+        api.getScan().then(res => { if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); } setLoading(false); }).catch(() => setLoading(false));
+      }, []);
+
+      if (authRequired === null) return <div className="shell"><div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Connecting...</div></div></div>;
+      if (authRequired && !authenticated) return <LoginScreen onLogin={() => setAuthenticated(true)} />;
+      if (loading) return <div className="shell"><div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading dashboard...</div></div></div>;
+
       if (!data) {
         return (
           <div className="shell">
-            <div className="header">
-              <div className="header-left">
-                <div className="logo">📊</div>
-                <div>
-                  <h1>GitHub Digest</h1>
-                  <div className="sub mono">Dashboard</div>
-                </div>
-              </div>
-            </div>
-            <div className="empty">
-              <div className="empty-icon">🔍</div>
-              <h3>No scan data yet</h3>
-              <p>Run your first scan to see a full dashboard of your GitHub repos — builds, PRs, security alerts, and more.</p>
-              <button className="btn btn-primary" onClick={handleScan} disabled={scanning}>
-                {scanning ? '⏳ Scanning...' : '🚀 Run First Scan'}
-              </button>
-            </div>
+            <div className="header"><div className="header-left"><div className="logo">📊</div><div><h1>GitHub Digest</h1><div className="sub mono">Dashboard</div></div></div></div>
+            <div className="empty"><div className="empty-icon">🔍</div><h3>No scan data yet</h3><p>Run your first scan to see a full dashboard of your GitHub repos — builds, PRs, security alerts, and more.</p><button className="btn btn-primary" onClick={handleScan} disabled={scanning}>{scanning ? '⏳ Scanning...' : '🚀 Run First Scan'}</button></div>
           </div>
         );
       }
@@ -735,77 +481,70 @@
 
       return (
         <div className="shell">
-          {/* Header */}
           <div className="header">
             <div className="header-left">
               <div className="logo">📊</div>
-              <div>
-                <h1>GitHub Digest</h1>
-                <div className="sub mono">
-                  {data.meta.reposScanned} repos · {data.meta.totalItems} items · {data.meta.elapsed}
-                </div>
-              </div>
+              <div><h1>GitHub Digest</h1><div className="sub mono">{data.meta.reposScanned} repos · {data.meta.totalItems} items · {data.meta.elapsed}</div></div>
             </div>
             <div className="header-actions">
               <div className="status-row">
-                <div className="status-dot" style={{ background: 'var(--green)', boxShadow: '0 0 8px rgba(48,161,78,0.4)' }} />
-                <span className="mono">Last: {new Date(data.meta.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="status-dot" style={{ background: viewingHistorical ? 'var(--yellow)' : 'var(--green)', boxShadow: viewingHistorical ? '0 0 8px rgba(240,192,32,0.4)' : '0 0 8px rgba(48,161,78,0.4)' }} />
+                <span className="mono">{viewingHistorical ? 'Historical' : 'Last: ' + new Date(data.meta.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-              <button className="btn" onClick={handleScan} disabled={scanning}>
-                {scanning ? '⏳' : '🔄'} {scanning ? 'Scanning...' : 'Rescan'}
-              </button>
-              <button className="btn btn-primary" onClick={handleDigest} disabled={scanning}>
-                📧 Email Digest
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button className="btn" onClick={() => { setSettingsOpen(!settingsOpen); setExportOpen(false); }} title="Scanner settings">⚙️</button>
+                {settingsOpen && <SettingsPopover config={scannerConfig} onToggle={handleToggleScanner} onClose={() => setSettingsOpen(false)} />}
+              </div>
+              <div style={{ position: 'relative' }}>
+                <button className="btn" onClick={() => { setExportOpen(!exportOpen); setSettingsOpen(false); }}>📥 Export</button>
+                {exportOpen && (<div className="dropdown"><button className="dropdown-item" onClick={() => { api.exportJson(); setExportOpen(false); }}>📄 Download JSON</button><button className="dropdown-item" onClick={() => { api.exportCsv(); setExportOpen(false); }}>📊 Download CSV</button></div>)}
+              </div>
+              <button className="btn" onClick={handleScan} disabled={scanning || viewingHistorical}>{scanning ? '⏳' : '🔄'} {scanning ? 'Scanning...' : 'Rescan'}</button>
+              <button className="btn btn-primary" onClick={handleDigest} disabled={scanning || viewingHistorical}>📧 Email Digest</button>
             </div>
           </div>
 
-          {/* Stat Cards */}
+          {viewingHistorical && (
+            <div className="history-banner">
+              <span>📜 Viewing historical scan from {new Date(data.meta.lastRun).toLocaleString()}</span>
+              <button className="btn btn-sm" onClick={handleBackToLatest}>Back to Latest</button>
+            </div>
+          )}
+
           <div className="stat-grid">
             {['builds', 'prs', 'security', 'tokens', 'issues', 'branches'].map((key, idx) => {
-              const cat = data[key];
-              const color = STAT_COLORS[key];
+              const cat = data[key]; const color = STAT_COLORS[key]; const d = diff && diff[key];
               return (
-                <div
-                  key={key}
-                  className={`stat-card${activeTab === key ? ' active' : ''}`}
-                  style={{ '--active-color': color, animationDelay: `${idx * 0.05}s`, animation: 'fadeUp 0.4s ease both' }}
-                  onClick={() => setActiveTab(key)}
-                >
+                <div key={key} className={`stat-card${activeTab === key ? ' active' : ''}`} style={{ '--active-color': color, animationDelay: `${idx * 0.05}s`, animation: 'fadeUp 0.4s ease both' }} onClick={() => setActiveTab(key)}>
                   <div className="stat-emoji">{cat.emoji}</div>
-                  <div className="stat-count mono" style={{ color: cat.count > 0 ? color : 'var(--text-dim)' }}>
-                    {cat.count}
-                  </div>
+                  <div className="stat-count mono" style={{ color: cat.count > 0 ? color : 'var(--text-dim)' }}>{cat.count}</div>
+                  {d && (d.new > 0 || d.resolved > 0) && (<div style={{ fontSize: 10, marginTop: 2, display: 'flex', gap: 6 }}>{d.new > 0 && <span style={{ color: 'var(--red)' }}>+{d.new} new</span>}{d.resolved > 0 && <span style={{ color: 'var(--green)' }}>-{d.resolved} fixed</span>}</div>)}
                   <div className="stat-label">{cat.category}</div>
                 </div>
               );
             })}
           </div>
 
-          {/* Tabs */}
           <div className="tabs">
             {TABS.map(tab => {
-              const count = tab.key !== 'overview' ? data[tab.key]?.count : undefined;
+              const count = tab.key !== 'overview' && tab.key !== 'history' ? data[tab.key]?.count : undefined;
+              const d = diff && diff[tab.key];
               return (
                 <button key={tab.key} className={`tab${activeTab === tab.key ? ' active' : ''}`} onClick={() => setActiveTab(tab.key)}>
-                  <span>{tab.icon}</span>
-                  {tab.label}
+                  <span>{tab.icon}</span>{tab.label}
                   {count !== undefined && <span className="badge mono">{count}</span>}
+                  {d && d.new > 0 && <span className="diff-badge diff-new">+{d.new}</span>}
                 </button>
               );
             })}
           </div>
 
-          {/* Panel */}
           <div className="panel" key={activeTab}>
-            {activeTab === 'overview' ? (
-              <Panel data={data} summary={summary} summaryLoading={summaryLoading} />
-            ) : (
-              <Panel data={data} insight={categoryInsights[activeTab]} onDeleteBranch={handleDeleteBranch} />
-            )}
+            {activeTab === 'overview' ? <Panel data={data} summary={summary} summaryLoading={summaryLoading} diff={diff} />
+             : activeTab === 'history' ? <Panel onLoadScan={handleLoadHistorical} />
+             : <Panel data={data} insight={categoryInsights[activeTab]} onDeleteBranch={handleDeleteBranch} />}
           </div>
 
-          {/* Toast */}
           {toast && <Toast message={toast} onClose={() => setToast(null)} />}
         </div>
       );
