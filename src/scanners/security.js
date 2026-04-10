@@ -1,10 +1,13 @@
 import { octokit } from "../utils/github.js";
+import { meetsThreshold, getMaxItems } from "../utils/scanRules.js";
 
 export async function scanSecurityAlerts(repos) {
   const alerts = [];
+  const maxItems = getMaxItems();
 
   for (const repo of repos) {
-    // Dependabot alerts
+    if (alerts.length >= maxItems) break;
+
     try {
       const { data } = await octokit.rest.dependabot.listAlertsForRepo({
         owner: repo.owner.login,
@@ -14,10 +17,12 @@ export async function scanSecurityAlerts(repos) {
       });
 
       for (const alert of data) {
+        const severity = alert.security_advisory?.severity || "unknown";
+        if (!meetsThreshold(severity)) continue;
         alerts.push({
           repo: repo.full_name,
           type: "dependabot",
-          severity: alert.security_advisory?.severity || "unknown",
+          severity,
           package: alert.security_vulnerability?.package?.name || "unknown",
           title: alert.security_advisory?.summary || "Vulnerability detected",
           url: alert.html_url,
@@ -25,10 +30,11 @@ export async function scanSecurityAlerts(repos) {
         });
       }
     } catch (err) {
-      // Dependabot may not be enabled or accessible
+      if (err.status !== 403 && err.status !== 404) {
+        console.warn(`Dependabot scan failed for ${repo.full_name}:`, err.message);
+      }
     }
 
-    // Code scanning alerts (if enabled)
     try {
       const { data } = await octokit.rest.codeScanning.listAlertsForRepo({
         owner: repo.owner.login,
@@ -38,10 +44,12 @@ export async function scanSecurityAlerts(repos) {
       });
 
       for (const alert of data) {
+        const severity = alert.rule?.severity || "unknown";
+        if (!meetsThreshold(severity)) continue;
         alerts.push({
           repo: repo.full_name,
           type: "code-scanning",
-          severity: alert.rule?.severity || "unknown",
+          severity,
           package: alert.rule?.id || "",
           title: alert.rule?.description || "Code scanning alert",
           url: alert.html_url,
@@ -49,10 +57,11 @@ export async function scanSecurityAlerts(repos) {
         });
       }
     } catch (err) {
-      // Code scanning may not be enabled
+      if (err.status !== 403 && err.status !== 404) {
+        console.warn(`Code scanning failed for ${repo.full_name}:`, err.message);
+      }
     }
 
-    // Secret scanning alerts
     try {
       const { data } = await octokit.rest.secretScanning.listAlertsForRepo({
         owner: repo.owner.login,
@@ -73,11 +82,12 @@ export async function scanSecurityAlerts(repos) {
         });
       }
     } catch (err) {
-      // Secret scanning may not be enabled
+      if (err.status !== 403 && err.status !== 404) {
+        console.warn(`Secret scanning failed for ${repo.full_name}:`, err.message);
+      }
     }
   }
 
-  // Sort by severity
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, unknown: 4 };
   alerts.sort((a, b) => (severityOrder[a.severity] ?? 4) - (severityOrder[b.severity] ?? 4));
 
@@ -85,13 +95,10 @@ export async function scanSecurityAlerts(repos) {
     category: "Security Alerts & Dependabot",
     emoji: "🛡️",
     count: alerts.length,
-    items: alerts,
+    items: alerts.slice(0, maxItems),
     summary: alerts.length
       ? alerts
-          .map(
-            (a) =>
-              `• **${a.repo}** [${a.severity.toUpperCase()}] ${a.title} (${a.package}, ${a.type}) ([link](${a.url}))`
-          )
+          .map((a) => `• **${a.repo}** [${a.severity.toUpperCase()}] ${a.title} (${a.package}, ${a.type}) ([link](${a.url}))`)
           .join("\n")
       : "No security alerts 🔒",
   };

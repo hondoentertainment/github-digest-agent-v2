@@ -6,11 +6,15 @@ dotenv.config();
 
 import { runScan, runDigest } from "./index.js";
 import { generateDashboardSummary } from "./services/dashboardSummary.js";
-import { octokit } from "./utils/github.js";
+import { octokit, getRateLimitInfo } from "./utils/github.js";
 import { saveScan, getLatestScan, getPreviousScan, getHistory, getScan } from "./utils/storage.js";
 import { authMiddleware, isAuthEnabled } from "./middleware/auth.js";
+import { rateLimit } from "./middleware/rateLimit.js";
 import { getEnabledScanners, setEnabledScanners, getAllScannerNames } from "./utils/scannerConfig.js";
 import { diffScans } from "./utils/diff.js";
+import { withScanLock, isScanLocked, getScanError } from "./utils/scanLock.js";
+import { getNotificationChannels } from "./services/notifier.js";
+import { getRules, setRules } from "./utils/scanRules.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -19,8 +23,6 @@ const PORT = process.env.PORT || 3000;
 // --- State ---
 let latestScan = getLatestScan();
 let latestSummary = null;
-let scanInProgress = false;
-let lastScanError = null;
 let latestDiff = null;
 
 if (latestScan) {
@@ -29,15 +31,15 @@ if (latestScan) {
 }
 
 // --- Middleware ---
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
-// --- Public Routes (no auth) ---
+// --- Public Routes (no auth required) ---
 
 app.get("/api/auth", (req, res) => {
   res.json({ enabled: isAuthEnabled() });
 });
 
-app.post("/api/login", (req, res) => {
+app.post("/api/login", rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }), (req, res) => {
   if (!isAuthEnabled()) return res.json({ status: "ok" });
   const { password } = req.body;
   if (password === process.env.DASHBOARD_PASSWORD) {
@@ -47,21 +49,19 @@ app.post("/api/login", (req, res) => {
   }
 });
 
-// --- Auth Middleware (protects all routes defined below) ---
-app.use("/api", authMiddleware);
-
-// --- Status ---
-
 app.get("/api/status", (req, res) => {
   res.json({
     status: "ok",
-    scanInProgress,
+    scanInProgress: isScanLocked(),
     lastScan: latestScan?.meta?.lastRun || null,
-    lastError: lastScanError,
+    lastError: getScanError(),
     hasSummary: !!latestSummary,
     historyCount: getHistory().length,
   });
 });
+
+// --- Auth Middleware (protects all routes defined below) ---
+app.use("/api", authMiddleware);
 
 // --- Scan ---
 
@@ -73,16 +73,9 @@ app.get("/api/scan", (req, res) => {
 });
 
 app.post("/api/scan", async (req, res) => {
-  if (scanInProgress) {
-    return res.status(409).json({ status: "busy", message: "A scan is already in progress." });
-  }
-
-  scanInProgress = true;
-  lastScanError = null;
-
   try {
     const previousScan = latestScan;
-    latestScan = await runScan();
+    latestScan = await withScanLock(() => runScan());
     saveScan(latestScan);
     latestDiff = previousScan ? diffScans(latestScan, previousScan) : null;
 
@@ -93,11 +86,9 @@ app.post("/api/scan", async (req, res) => {
 
     res.json({ status: "ok", data: latestScan, diff: latestDiff });
   } catch (err) {
-    lastScanError = err.message;
-    console.error("❌ Scan failed:", err);
-    res.status(500).json({ status: "error", message: err.message });
-  } finally {
-    scanInProgress = false;
+    const status = err.status || 500;
+    if (status !== 409) console.error("❌ Scan failed:", err);
+    res.status(status).json({ status: status === 409 ? "busy" : "error", message: err.message });
   }
 });
 
@@ -121,21 +112,16 @@ app.get("/api/summary", async (req, res) => {
 // --- Digest ---
 
 app.post("/api/digest", async (req, res) => {
-  if (scanInProgress) {
-    return res.status(409).json({ status: "busy", message: "A scan is already in progress." });
-  }
-
-  scanInProgress = true;
   try {
     const previousScan = latestScan;
-    latestScan = await runDigest();
+    latestScan = await withScanLock(() => runDigest());
     saveScan(latestScan);
     latestDiff = previousScan ? diffScans(latestScan, previousScan) : null;
     res.json({ status: "ok", message: "Digest sent!", data: latestScan, diff: latestDiff });
   } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  } finally {
-    scanInProgress = false;
+    const status = err.status || 500;
+    if (status !== 409) console.error("❌ Digest failed:", err);
+    res.status(status).json({ status: status === 409 ? "busy" : "error", message: err.message });
   }
 });
 
@@ -169,6 +155,33 @@ app.post("/api/config/scanners", (req, res) => {
   }
   const updated = setEnabledScanners(scanners);
   res.json({ status: "ok", data: { enabled: updated } });
+});
+
+// --- Scan Rules ---
+
+app.get("/api/config/rules", (req, res) => {
+  res.json({ status: "ok", data: getRules() });
+});
+
+app.post("/api/config/rules", (req, res) => {
+  const { rules } = req.body;
+  if (!rules || typeof rules !== "object") {
+    return res.status(400).json({ status: "error", message: "rules must be an object." });
+  }
+  const updated = setRules(rules);
+  res.json({ status: "ok", data: updated });
+});
+
+// --- Rate Limit Budget ---
+
+app.get("/api/rate-limit", (req, res) => {
+  res.json({ status: "ok", data: getRateLimitInfo() });
+});
+
+// --- Notifications ---
+
+app.get("/api/config/notifications", (req, res) => {
+  res.json({ status: "ok", data: getNotificationChannels() });
 });
 
 // --- Export ---
@@ -221,6 +234,7 @@ app.delete("/api/branches/:owner/:repo/:branch", async (req, res) => {
         (b) => !(b.repo === `${owner}/${repo}` && b.branch === branch)
       );
       latestScan.branches.count = latestScan.branches.items.length;
+      saveScan(latestScan);
     }
 
     res.json({ status: "ok", message: `Deleted branch '${branch}' from ${owner}/${repo}` });

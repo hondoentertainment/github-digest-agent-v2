@@ -23,7 +23,7 @@ export async function generateDigest(scanResults, repoCount) {
   let htmlContent;
   try {
     const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
       max_tokens: 2000,
       messages: [
         {

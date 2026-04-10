@@ -3,21 +3,36 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { runDigest } from "./index.js";
+import { withScanLock } from "./utils/scanLock.js";
+import { saveScan } from "./utils/storage.js";
+import { sendNotifications } from "./services/notifier.js";
 
-// Import server to start it (side-effect: starts Express)
 import "./server.js";
 
 const schedule = process.env.CRON_SCHEDULE || "0 7 * * *";
 
 console.log(`⏰ Digest cron scheduled: ${schedule}`);
 
-// Run immediately on start if --now flag is passed
+async function scheduledDigest() {
+  try {
+    const result = await withScanLock(() => runDigest());
+    saveScan(result);
+    await sendNotifications(result);
+  } catch (err) {
+    if (err.status === 409) {
+      console.warn("⏭️ Skipping scheduled digest — scan already in progress");
+    } else {
+      console.error("❌ Scheduled digest failed:", err);
+    }
+  }
+}
+
 if (process.argv.includes("--now")) {
   console.log("🏃 Running digest immediately (--now flag)...\n");
-  runDigest().catch(console.error);
+  scheduledDigest();
 }
 
 cron.schedule(schedule, () => {
   console.log(`\n⏰ Cron triggered at ${new Date().toLocaleString()}`);
-  runDigest().catch(console.error);
+  scheduledDigest();
 });

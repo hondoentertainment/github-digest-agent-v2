@@ -10,6 +10,7 @@ import { scanOpenIssues } from "./scanners/issues.js";
 import { scanStaleBranches } from "./scanners/branches.js";
 import { generateDigest } from "./services/summarizer.js";
 import { sendDigestEmail } from "./services/mailer.js";
+import { sendNotifications } from "./services/notifier.js";
 import { isScannerEnabled } from "./utils/scannerConfig.js";
 
 const SCANNER_REGISTRY = [
@@ -68,7 +69,7 @@ export async function runScan() {
 }
 
 /**
- * Full digest pipeline: scan → Claude summary → email.
+ * Full digest pipeline: scan → Claude summary → email → notifications.
  */
 export async function runDigest() {
   const result = await runScan();
@@ -79,6 +80,9 @@ export async function runDigest() {
 
   console.log("📧 Sending email...");
   await sendDigestEmail(emailHtml);
+
+  console.log("🔔 Sending notifications...");
+  await sendNotifications(result);
 
   console.log("\n✅ Digest sent!");
   return result;

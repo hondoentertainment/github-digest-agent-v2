@@ -1,12 +1,16 @@
 import { octokit } from "../utils/github.js";
+import { getBuildWindowHours, getMaxItems } from "../utils/scanRules.js";
 
 export async function scanFailedBuilds(repos) {
   const failures = [];
+  const windowHours = getBuildWindowHours();
+  const maxItems = getMaxItems();
 
   for (const repo of repos) {
+    if (failures.length >= maxItems) break;
+
     try {
-      // Check GitHub Actions workflow runs from the last 24 hours
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const since = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
 
       const { data } = await octokit.rest.actions.listWorkflowRunsForRepo({
         owner: repo.owner.login,
@@ -28,7 +32,6 @@ export async function scanFailedBuilds(repos) {
         });
       }
     } catch (err) {
-      // Skip repos where we can't access Actions (permissions, etc.)
       if (err.status !== 403 && err.status !== 404) {
         console.warn(`Failed to scan builds for ${repo.full_name}:`, err.message);
       }
@@ -39,7 +42,7 @@ export async function scanFailedBuilds(repos) {
     category: "Failed CI/Build Issues",
     emoji: "🔴",
     count: failures.length,
-    items: failures,
+    items: failures.slice(0, maxItems),
     summary: failures.length
       ? failures.map((f) => `• **${f.repo}** — \`${f.workflow}\` failed on \`${f.branch}\`: ${f.message} ([link](${f.url}))`).join("\n")
       : "All builds passing ✅",

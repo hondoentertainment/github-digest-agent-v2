@@ -20,14 +20,12 @@
 - [x] Scan result diffing (highlight what changed since last scan)
 - [x] Export scan results as JSON/CSV
 
-## Medium-Term (v2.2)
+## Medium-Term (v2.2) — Shipped
 
-- [ ] Webhook-triggered scans (GitHub webhooks for real-time alerts)
-- [ ] Multi-user support (per-user GitHub tokens and email preferences)
-- [ ] Slack/Discord notification channels
-- [ ] Custom scan rules and severity thresholds
-- [ ] Dashboard dark/light theme toggle
-- [ ] Rate limit budget display and management
+- [x] Slack/Discord notification channels (webhook-based)
+- [x] Custom scan rules and severity thresholds
+- [x] Dashboard dark/light theme toggle
+- [x] Rate limit budget display and management
 
 ## Long-Term (v3.0)
 
@@ -37,3 +35,5 @@
 - [ ] AI-powered fix suggestions with one-click PRs
 - [ ] Mobile-responsive PWA with push notifications
 - [ ] Multi-provider AI support (OpenAI, Gemini, local models)
+- [ ] Webhook-triggered scans (GitHub webhooks for real-time alerts)
+- [ ] Multi-user support (per-user GitHub tokens and email preferences)

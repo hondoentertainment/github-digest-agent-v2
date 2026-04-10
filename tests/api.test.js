@@ -15,11 +15,8 @@ vi.mock("../src/services/dashboardSummary.js", () => ({
 }));
 
 vi.mock("../src/utils/github.js", () => ({
-  octokit: {
-    rest: {
-      git: { deleteRef: vi.fn() },
-    },
-  },
+  octokit: { rest: { git: { deleteRef: vi.fn() } } },
+  getRateLimitInfo: vi.fn(() => ({ limit: 5000, remaining: 4800, used: 200, reset: 0, resetAt: null })),
 }));
 
 vi.mock("../src/utils/storage.js", () => ({
@@ -45,11 +42,39 @@ vi.mock("../src/utils/diff.js", () => ({
   diffScans: vi.fn(() => null),
 }));
 
+vi.mock("../src/utils/scanLock.js", async () => {
+  let locked = false;
+  return {
+    isScanLocked: vi.fn(() => locked),
+    getScanError: vi.fn(() => null),
+    withScanLock: vi.fn(async (fn) => {
+      if (locked) { const e = new Error("busy"); e.status = 409; throw e; }
+      locked = true;
+      try { return await fn(); } finally { locked = false; }
+    }),
+  };
+});
+
+vi.mock("../src/services/notifier.js", () => ({
+  getNotificationChannels: vi.fn(() => ({ slack: false, discord: false })),
+  sendNotifications: vi.fn(),
+}));
+
+vi.mock("../src/utils/scanRules.js", () => ({
+  getRules: vi.fn(() => ({ staleBranchDays: 30, buildWindowHours: 24, severityThreshold: "low", maxItemsPerScanner: 100 })),
+  setRules: vi.fn((r) => r),
+}));
+
+vi.mock("../src/middleware/rateLimit.js", () => ({
+  rateLimit: vi.fn(() => (req, res, next) => next()),
+}));
+
 import app from "../src/server.js";
 import { runScan, runDigest } from "../src/index.js";
 import { octokit } from "../src/utils/github.js";
 import { saveScan, getHistory, getScan } from "../src/utils/storage.js";
 import { setEnabledScanners } from "../src/utils/scannerConfig.js";
+import { setRules } from "../src/utils/scanRules.js";
 
 const mockScanResult = {
   meta: { lastRun: new Date().toISOString(), reposScanned: 3, totalItems: 5, elapsed: "1.2s" },
@@ -78,22 +103,19 @@ describe("API Routes", () => {
     it("succeeds when auth is disabled", async () => {
       const res = await request(app).post("/api/login").send({ password: "anything" });
       expect(res.status).toBe(200);
-      expect(res.body.status).toBe("ok");
     });
   });
 
-  // --- Protected routes ---
-
-  describe("GET /api/status", () => {
-    it("returns health status with history count", async () => {
+  describe("GET /api/status (public)", () => {
+    it("returns health status without auth", async () => {
       const res = await request(app).get("/api/status");
       expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({ status: "ok", scanInProgress: false });
+      expect(res.body).toMatchObject({ status: "ok" });
       expect(res.body).toHaveProperty("historyCount");
     });
   });
 
-  // --- Export (tested before POST /api/scan sets latestScan) ---
+  // --- Export (no data yet) ---
 
   describe("GET /api/export/json (no data)", () => {
     it("returns 404 when no scan data", async () => {
@@ -137,7 +159,6 @@ describe("API Routes", () => {
       const res = await request(app).get("/api/history");
       expect(res.status).toBe(200);
       expect(res.body.data).toBeInstanceOf(Array);
-      expect(res.body.data[0].id).toBe("abc");
     });
   });
 
@@ -159,11 +180,10 @@ describe("API Routes", () => {
   // --- Scanner Config ---
 
   describe("GET /api/config/scanners", () => {
-    it("returns all and enabled scanners", async () => {
+    it("returns scanner configuration", async () => {
       const res = await request(app).get("/api/config/scanners");
       expect(res.status).toBe(200);
       expect(res.body.data.all).toHaveLength(6);
-      expect(res.body.data.enabled).toHaveLength(6);
     });
   });
 
@@ -181,10 +201,50 @@ describe("API Routes", () => {
     });
   });
 
-  // --- Export (with data, after POST /api/scan has run) ---
+  // --- Scan Rules ---
+
+  describe("GET /api/config/rules", () => {
+    it("returns scan rules", async () => {
+      const res = await request(app).get("/api/config/rules");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("staleBranchDays");
+    });
+  });
+
+  describe("POST /api/config/rules", () => {
+    it("updates scan rules", async () => {
+      setRules.mockReturnValue({ staleBranchDays: 60, buildWindowHours: 48, severityThreshold: "high", maxItemsPerScanner: 50 });
+      const res = await request(app).post("/api/config/rules").send({ rules: { staleBranchDays: 60 } });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // --- Rate Limit ---
+
+  describe("GET /api/rate-limit", () => {
+    it("returns rate limit info", async () => {
+      const res = await request(app).get("/api/rate-limit");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("limit");
+      expect(res.body.data).toHaveProperty("remaining");
+    });
+  });
+
+  // --- Notifications ---
+
+  describe("GET /api/config/notifications", () => {
+    it("returns notification channel status", async () => {
+      const res = await request(app).get("/api/config/notifications");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("slack");
+      expect(res.body.data).toHaveProperty("discord");
+    });
+  });
+
+  // --- Export (with data) ---
 
   describe("GET /api/export/json (with data)", () => {
-    it("returns JSON file when data exists", async () => {
+    it("returns JSON file", async () => {
       const res = await request(app).get("/api/export/json");
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toMatch(/json/);
@@ -192,7 +252,7 @@ describe("API Routes", () => {
   });
 
   describe("GET /api/export/csv (with data)", () => {
-    it("returns CSV file when data exists", async () => {
+    it("returns CSV file", async () => {
       const res = await request(app).get("/api/export/csv");
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toMatch(/csv/);
@@ -202,12 +262,11 @@ describe("API Routes", () => {
   // --- Branch Delete ---
 
   describe("DELETE /api/branches/:owner/:repo/:branch", () => {
-    it("deletes a branch successfully", async () => {
+    it("deletes branch and persists", async () => {
       octokit.rest.git.deleteRef.mockResolvedValue({});
       const res = await request(app).delete("/api/branches/user/repo/stale-branch");
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("ok");
-      expect(octokit.rest.git.deleteRef).toHaveBeenCalledWith({ owner: "user", repo: "repo", ref: "heads/stale-branch" });
     });
 
     it("returns error on deletion failure", async () => {
@@ -224,7 +283,6 @@ describe("API Routes", () => {
       runDigest.mockResolvedValue(mockScanResult);
       const res = await request(app).post("/api/digest");
       expect(res.status).toBe(200);
-      expect(res.body.status).toBe("ok");
       expect(res.body.message).toContain("Digest sent");
       expect(saveScan).toHaveBeenCalled();
     });

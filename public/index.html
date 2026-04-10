@@ -7,33 +7,34 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #010409;
-      --surface: #0d1117;
-      --card: #161b22;
-      --border: #21262d;
-      --border-bright: #30363d;
-      --text: #e6edf3;
-      --text-secondary: #c9d1d9;
-      --text-dim: #484f58;
-      --text-faint: #30363d;
+      --bg: #010409; --surface: #0d1117; --card: #161b22;
+      --border: #21262d; --border-bright: #30363d;
+      --text: #e6edf3; --text-secondary: #c9d1d9; --text-dim: #484f58; --text-faint: #30363d;
       --code-bg: #1c2128;
-      --accent: #58a6ff;
-      --accent-bg: rgba(88, 166, 255, 0.1);
-      --red: #ff5a52;
-      --red-bg: rgba(255, 45, 32, 0.08);
-      --orange: #ff8a56;
-      --orange-bg: rgba(255, 107, 43, 0.08);
-      --yellow: #f0c020;
-      --yellow-bg: rgba(240, 192, 32, 0.08);
-      --green: #30a14e;
-      --green-bg: rgba(48, 161, 78, 0.08);
-      --purple: #a371f7;
-      --purple-bg: rgba(163, 113, 247, 0.08);
-      --row-hover: rgba(22, 27, 34, 0.6);
+      --accent: #58a6ff; --accent-bg: rgba(88,166,255,0.1);
+      --red: #ff5a52; --red-bg: rgba(255,45,32,0.08);
+      --orange: #ff8a56; --orange-bg: rgba(255,107,43,0.08);
+      --yellow: #f0c020; --yellow-bg: rgba(240,192,32,0.08);
+      --green: #30a14e; --green-bg: rgba(48,161,78,0.08);
+      --purple: #a371f7; --purple-bg: rgba(163,113,247,0.08);
+      --row-hover: rgba(22,27,34,0.6);
+    }
+    :root.light {
+      --bg: #ffffff; --surface: #f6f8fa; --card: #ffffff;
+      --border: #d0d7de; --border-bright: #bbc0c5;
+      --text: #1f2328; --text-secondary: #656d76; --text-dim: #8b949e; --text-faint: #d0d7de;
+      --code-bg: #f0f2f4;
+      --accent: #0969da; --accent-bg: rgba(9,105,218,0.08);
+      --red: #cf222e; --red-bg: rgba(207,34,46,0.06);
+      --orange: #bc4c00; --orange-bg: rgba(188,76,0,0.06);
+      --yellow: #9a6700; --yellow-bg: rgba(154,103,0,0.06);
+      --green: #1a7f37; --green-bg: rgba(26,127,55,0.06);
+      --purple: #8250df; --purple-bg: rgba(130,80,223,0.06);
+      --row-hover: rgba(246,248,250,0.6);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', -apple-system, sans-serif; min-height: 100vh; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', -apple-system, sans-serif; min-height: 100vh; transition: background 0.3s, color 0.3s; }
     .mono { font-family: 'JetBrains Mono', monospace; }
     .shell { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
 
@@ -50,6 +51,7 @@
     .btn-primary { background: var(--accent-bg); border-color: rgba(88,166,255,0.3); color: var(--accent); }
     .btn-primary:hover { background: rgba(88,166,255,0.18); }
     .btn-sm { padding: 4px 12px; font-size: 11px; }
+    .btn-icon { padding: 8px; min-width: 36px; justify-content: center; }
 
     .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 24px; }
     .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
@@ -118,7 +120,6 @@
 
     .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--border-bright); border-radius: 10px; padding: 14px 20px; font-size: 13px; color: var(--text-secondary); box-shadow: 0 8px 32px rgba(0,0,0,0.4); animation: slideIn 0.3s ease both; z-index: 100; display: flex; align-items: center; gap: 10px; }
 
-    /* --- Login --- */
     .login-overlay { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: flex; align-items: center; justify-content: center; }
     .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px; animation: fadeUp 0.4s ease both; text-align: center; }
     .login-box h2 { font-size: 20px; margin-bottom: 6px; }
@@ -127,8 +128,7 @@
     .login-input:focus { border-color: var(--accent); }
     .login-error { font-size: 12px; color: var(--red); margin-bottom: 12px; }
 
-    /* --- Popover / Dropdown --- */
-    .popover { position: absolute; top: 100%; right: 0; margin-top: 8px; background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 16px 20px; min-width: 240px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 50; animation: fadeUp 0.2s ease both; }
+    .popover { position: absolute; top: 100%; right: 0; margin-top: 8px; background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px; padding: 16px 20px; min-width: 260px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 50; animation: fadeUp 0.2s ease both; }
     .popover-title { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
     .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 13px; }
     .toggle-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-secondary); }
@@ -142,13 +142,20 @@
     .dropdown-item:hover { background: var(--card); color: var(--text); }
     .dropdown-item + .dropdown-item { border-top: 1px solid var(--border); }
 
-    /* --- Diff --- */
     .diff-badge { display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; margin-left: 4px; }
     .diff-new { background: var(--red-bg); color: var(--red); }
     .diff-resolved { background: var(--green-bg); color: var(--green); }
 
-    /* --- History banner --- */
     .history-banner { background: var(--yellow-bg); border: 1px solid rgba(240,192,32,0.25); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--yellow); }
+
+    .rate-bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 6px; }
+    .rate-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+
+    .config-field { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 13px; }
+    .config-field label { color: var(--text-secondary); }
+    .config-input { width: 70px; padding: 4px 8px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; font-family: 'JetBrains Mono', monospace; text-align: right; outline: none; }
+    .config-input:focus { border-color: var(--accent); }
+    .config-select { padding: 4px 8px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; font-family: 'DM Sans', sans-serif; outline: none; }
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -167,12 +174,17 @@
 <body>
   <div id="app"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" integrity="sha512-8Q6Y9XnTbOE+JNvjBQwJ2H8S+UV4uA6hiRykhdtIyDYZ2TprdNmWOUaKdGzOhyr4dCyk287OejbPvwl7lrfg==" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" integrity="sha512-MOCpqoRoisCTwJ8vQQiciZv0qcpROCidek3GTFS6KTk2+y7munJIlKCVkFCYY+p3ErYFXCjmFjnfTTRSC1ZBWQ==" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js" integrity="sha512-soMlmjIGGNxSRZKTBBpg/jvCIHJkmRNZevUNRjSNl1GvJSF2ZditFGEbJJJNho+VhfEYjPC/MZGIm+jRtaL0Q==" crossorigin="anonymous"></script>
 
   <script type="text/babel">
     const { useState, useEffect, useCallback, useRef } = React;
+
+    // ─── Theme ───────────────────────────────────────────────────
+    function getTheme() { return localStorage.getItem('digest_theme') || 'dark'; }
+    function applyTheme(t) { document.documentElement.classList.toggle('light', t === 'light'); localStorage.setItem('digest_theme', t); }
+    applyTheme(getTheme());
 
     // ─── Auth Token ──────────────────────────────────────────────
     let authToken = sessionStorage.getItem('digest_auth') || '';
@@ -183,10 +195,8 @@
     // ─── Download Helper ─────────────────────────────────────────
     function downloadBlob(blob, filename) {
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
+      const a = document.createElement('a'); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
 
     // ─── API Layer ───────────────────────────────────────────────
@@ -203,6 +213,10 @@
       loadScan: (id) => fetch(`/api/history/${id}`, { headers: apiHeaders() }).then(r => r.json()),
       getConfig: () => fetch('/api/config/scanners', { headers: apiHeaders() }).then(r => r.json()),
       setConfig: (scanners) => fetch('/api/config/scanners', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ scanners }) }).then(r => r.json()),
+      getRules: () => fetch('/api/config/rules', { headers: apiHeaders() }).then(r => r.json()),
+      setRules: (rules) => fetch('/api/config/rules', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ rules }) }).then(r => r.json()),
+      getRateLimit: () => fetch('/api/rate-limit', { headers: apiHeaders() }).then(r => r.json()),
+      getNotifications: () => fetch('/api/config/notifications', { headers: apiHeaders() }).then(r => r.json()),
       exportJson: async () => { const res = await fetch('/api/export/json', { headers: apiHeaders() }); const blob = await res.blob(); downloadBlob(blob, `github-digest-${new Date().toISOString().slice(0,10)}.json`); },
       exportCsv: async () => { const res = await fetch('/api/export/csv', { headers: apiHeaders() }); const blob = await res.blob(); downloadBlob(blob, `github-digest-${new Date().toISOString().slice(0,10)}.csv`); },
     };
@@ -213,7 +227,6 @@
     const LABEL_COLORS = { P0: '#ff2d20', security: '#ff2d20', bug: '#ff6b2b', feature: '#58a6ff', enhancement: '#58a6ff', architecture: '#a371f7' };
     const STAT_COLORS = { builds: '#ff2d20', prs: '#58a6ff', security: '#f0c020', tokens: '#ff6b2b', issues: '#a371f7', branches: '#30a14e' };
     const SCANNER_ICONS = { builds: '🔴', prs: '🔀', security: '🛡️', tokens: '🔑', issues: '🐛', branches: '🌿' };
-
     const TABS = [
       { key: 'overview', label: 'Overview', icon: '◉' },
       { key: 'builds', label: 'Builds', icon: '🔴' },
@@ -224,6 +237,15 @@
       { key: 'branches', label: 'Branches', icon: '🌿' },
       { key: 'history', label: 'History', icon: '📜' },
     ];
+
+    // ─── Outside-click hook ──────────────────────────────────────
+    function useOutsideClick(ref, onClose) {
+      useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+      }, [onClose]);
+    }
 
     // ─── Small Components ────────────────────────────────────────
     function SevBadge({ severity }) { return <span className={`sev mono ${SEV_MAP[severity] || 'sev-medium'}`}>{(severity || 'unknown').toUpperCase()}</span>; }
@@ -241,8 +263,7 @@
           const res = await api.login(password);
           if (res.status === 'ok') { setAuthToken(password); onLogin(); }
           else setError(res.message || 'Invalid password');
-        } catch { setError('Connection failed'); }
-        finally { setBusy(false); }
+        } catch { setError('Connection failed'); } finally { setBusy(false); }
       };
       return (
         <div className="login-overlay">
@@ -261,20 +282,63 @@
     }
 
     // ─── Settings Popover ────────────────────────────────────────
-    function SettingsPopover({ config, onToggle, onClose }) {
+    function SettingsPopover({ config, scanRules, notifications, onToggle, onRuleChange, onClose, onLogout, authEnabled }) {
       const ref = useRef();
-      useEffect(() => { const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
+      useOutsideClick(ref, onClose);
       const all = config?.all || [];
       const enabled = new Set(config?.enabled || []);
+      const [localRules, setLocalRules] = useState(scanRules || {});
+      const ruleTimer = useRef(null);
+
+      const handleRuleChange = (key, val) => {
+        const updated = { ...localRules, [key]: val };
+        setLocalRules(updated);
+        clearTimeout(ruleTimer.current);
+        ruleTimer.current = setTimeout(() => onRuleChange(updated), 500);
+      };
+
       return (
-        <div className="popover" ref={ref}>
-          <div className="popover-title">Scanner Selection</div>
+        <div className="popover" ref={ref} style={{ minWidth: 300 }}>
+          <div className="popover-title">Scanners</div>
           {all.map(name => (
             <div className="toggle-row" key={name}>
               <label><span>{SCANNER_ICONS[name]}</span><span>{name}</span></label>
               <div className={`toggle-switch ${enabled.has(name) ? 'on' : ''}`} onClick={() => onToggle(name, !enabled.has(name))} />
             </div>
           ))}
+
+          <div className="popover-title" style={{ marginTop: 16 }}>Scan Rules</div>
+          <div className="config-field"><label>Stale branch days</label><input type="number" className="config-input" value={localRules.staleBranchDays || 30} onChange={e => handleRuleChange('staleBranchDays', parseInt(e.target.value) || 30)} /></div>
+          <div className="config-field"><label>Build window (hours)</label><input type="number" className="config-input" value={localRules.buildWindowHours || 24} onChange={e => handleRuleChange('buildWindowHours', parseInt(e.target.value) || 24)} /></div>
+          <div className="config-field"><label>Min severity</label><select className="config-select" value={localRules.severityThreshold || 'low'} onChange={e => handleRuleChange('severityThreshold', e.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
+          <div className="config-field"><label>Max items/scanner</label><input type="number" className="config-input" value={localRules.maxItemsPerScanner || 100} onChange={e => handleRuleChange('maxItemsPerScanner', parseInt(e.target.value) || 100)} /></div>
+
+          {notifications && (
+            <div style={{ marginTop: 16 }}>
+              <div className="popover-title">Notifications</div>
+              <div className="toggle-row"><label>Slack</label><span style={{ fontSize: 11, color: notifications.slack ? 'var(--green)' : 'var(--text-dim)' }}>{notifications.slack ? '✓ Connected' : 'Not configured'}</span></div>
+              <div className="toggle-row"><label>Discord</label><span style={{ fontSize: 11, color: notifications.discord ? 'var(--green)' : 'var(--text-dim)' }}>{notifications.discord ? '✓ Connected' : 'Not configured'}</span></div>
+            </div>
+          )}
+
+          {authEnabled && (
+            <button className="btn" style={{ width: '100%', marginTop: 16, justifyContent: 'center', color: 'var(--red)' }} onClick={onLogout}>Sign Out</button>
+          )}
+        </div>
+      );
+    }
+
+    // ─── Rate Limit Bar ──────────────────────────────────────────
+    function RateLimitBar({ info }) {
+      if (!info || !info.limit) return null;
+      const pct = Math.round((info.remaining / info.limit) * 100);
+      const color = pct > 50 ? 'var(--green)' : pct > 20 ? 'var(--yellow)' : 'var(--red)';
+      return (
+        <div title={`${info.remaining}/${info.limit} API calls remaining`} style={{ minWidth: 80 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="mono">{info.remaining}/{info.limit}</span>
+          </div>
+          <div className="rate-bar"><div className="rate-bar-fill" style={{ width: pct + '%', background: color }} /></div>
         </div>
       );
     }
@@ -289,7 +353,6 @@
       (data.security?.items || []).filter(i => i.severity === 'high').forEach(i => priorityItems.push({ ...i, _cat: '🛡️', _sev: 'high' }));
       (data.issues?.items || []).filter(i => i.isBug).slice(0, 3).forEach(i => priorityItems.push({ ...i, _cat: '🐛', _sev: 'high' }));
       (data.builds?.items || []).slice(0, 2).forEach(i => priorityItems.push({ ...i, _cat: '🔴', _sev: 'medium' }));
-
       return (
         <div>
           <div className="ai-card" style={{ animation: 'fadeUp 0.4s ease both' }}>
@@ -305,76 +368,28 @@
               <SevBadge severity={item._sev} />
             </div>
           ))}
-          {actions.length > 0 && (
-            <div className="actions-section">
-              <div className="actions-title mono">Recommended Actions</div>
-              {actions.map((action, idx) => (<div className="action-item" key={idx} style={{ animationDelay: `${0.2 + idx * 0.08}s` }}><span className="action-num mono">{idx + 1}</span><span className="action-text">{action}</span></div>))}
-            </div>
-          )}
+          {actions.length > 0 && (<div className="actions-section"><div className="actions-title mono">Recommended Actions</div>{actions.map((action, idx) => (<div className="action-item" key={idx} style={{ animationDelay: `${0.2 + idx * 0.08}s` }}><span className="action-num mono">{idx + 1}</span><span className="action-text">{action}</span></div>))}</div>)}
         </div>
       );
     }
 
-    // ─── Panel: Builds ───────────────────────────────────────────
-    function BuildsPanel({ data, insight }) {
-      const items = data.builds?.items || [];
-      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">✅</div><h3>All builds passing</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="dot" style={{ background: 'var(--red)', boxShadow: '0 0 8px rgba(255,45,32,0.4)' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><span className="row-title">{item.repo}</span><code>{item.workflow}</code><code style={{ color: 'var(--accent)' }}>{item.branch}</code></div><div className="row-sub">{item.message}</div></div><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>);
-    }
-
-    // ─── Panel: PRs ──────────────────────────────────────────────
-    function PRsPanel({ data, insight }) {
-      const items = data.prs?.items || [];
-      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open PRs</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.draft ? 'var(--border)' : 'var(--green-bg)', color: item.draft ? 'var(--text-dim)' : 'var(--green)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}{item.draft && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>draft</span>}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div><div className="row-right" style={{ fontSize: 11, color: item.reviewCount > 0 ? 'var(--green)' : 'var(--text-dim)' }}>{item.reviewCount > 0 ? `${item.reviewCount} review${item.reviewCount > 1 ? 's' : ''}` : 'No reviews'}</div></div>))}</div>);
-    }
-
-    // ─── Panel: Security ─────────────────────────────────────────
-    function SecurityPanel({ data, insight }) {
-      const items = data.security?.items || [];
-      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔒</div><h3>No security alerts</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><code>{item.package}</code><span className="sep">·</span><span>{item.type}</span></div></div><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>);
-    }
-
-    // ─── Panel: Tokens ───────────────────────────────────────────
-    function TokensPanel({ data, insight }) {
-      const items = data.tokens?.items || [];
-      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔐</div><h3>All credentials valid</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.type}</span></div></div></div>))}</div>);
-    }
-
-    // ─── Panel: Issues ───────────────────────────────────────────
-    function IssuesPanel({ data, insight }) {
-      const items = data.issues?.items || [];
-      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open issues</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.isBug ? 'var(--orange-bg)' : 'var(--accent-bg)', color: item.isBug ? 'var(--orange)' : 'var(--accent)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span><span className="sep">·</span><span>{item.commentCount} 💬</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div></div>))}</div>);
-    }
-
-    // ─── Panel: Branches ─────────────────────────────────────────
-    function BranchesPanel({ data, insight, onDeleteBranch }) {
-      const items = data.branches?.items || [];
-      return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🧹</div><h3>No stale branches</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s` }}><span style={{ fontSize: 16, flexShrink: 0 }}>🌿</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><code style={{ fontSize: 13, fontWeight: 600 }}>{item.branch}</code>{item.protected && <span style={{ fontSize: 10, color: 'var(--yellow)', fontWeight: 600 }}>⚠️ PROTECTED</span>}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d stale</span><span className="sep">·</span><span>by {item.author}</span></div></div><button className="btn-delete mono" disabled={item.protected} onClick={(e) => { e.stopPropagation(); if (confirm(`Delete branch "${item.branch}" from ${item.repo}?`)) onDeleteBranch(item); }}>{item.protected ? '🔒' : 'Delete'}</button></div>))}</div>);
-    }
+    // ─── Category Panels ─────────────────────────────────────────
+    function BuildsPanel({ data, insight }) { const items = data.builds?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">✅</div><h3>All builds passing</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="dot" style={{ background: 'var(--red)', boxShadow: '0 0 8px rgba(255,45,32,0.4)' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><span className="row-title">{item.repo}</span><code>{item.workflow}</code><code style={{ color: 'var(--accent)' }}>{item.branch}</code></div><div className="row-sub">{item.message}</div></div><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>); }
+    function PRsPanel({ data, insight }) { const items = data.prs?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open PRs</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.draft ? 'var(--border)' : 'var(--green-bg)', color: item.draft ? 'var(--text-dim)' : 'var(--green)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}{item.draft && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>draft</span>}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div><div className="row-right" style={{ fontSize: 11, color: item.reviewCount > 0 ? 'var(--green)' : 'var(--text-dim)' }}>{item.reviewCount > 0 ? `${item.reviewCount} review${item.reviewCount > 1 ? 's' : ''}` : 'No reviews'}</div></div>))}</div>); }
+    function SecurityPanel({ data, insight }) { const items = data.security?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔒</div><h3>No security alerts</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><code>{item.package}</code><span className="sep">·</span><span>{item.type}</span></div></div><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>); }
+    function TokensPanel({ data, insight }) { const items = data.tokens?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔐</div><h3>All credentials valid</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.type}</span></div></div></div>))}</div>); }
+    function IssuesPanel({ data, insight }) { const items = data.issues?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open issues</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.isBug ? 'var(--orange-bg)' : 'var(--accent-bg)', color: item.isBug ? 'var(--orange)' : 'var(--accent)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span><span className="sep">·</span><span>{item.commentCount} 💬</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div></div>))}</div>); }
+    function BranchesPanel({ data, insight, onDeleteBranch }) { const items = data.branches?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🧹</div><h3>No stale branches</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s` }}><span style={{ fontSize: 16, flexShrink: 0 }}>🌿</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><code style={{ fontSize: 13, fontWeight: 600 }}>{item.branch}</code>{item.protected && <span style={{ fontSize: 10, color: 'var(--yellow)', fontWeight: 600 }}>⚠️ PROTECTED</span>}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d stale</span><span className="sep">·</span><span>by {item.author}</span></div></div><button className="btn-delete mono" disabled={item.protected} onClick={(e) => { e.stopPropagation(); if (confirm(`Delete branch "${item.branch}" from ${item.repo}?`)) onDeleteBranch(item); }}>{item.protected ? '🔒' : 'Delete'}</button></div>))}</div>); }
 
     // ─── Panel: History ──────────────────────────────────────────
     function HistoryPanel({ onLoadScan }) {
-      const [history, setHistory] = useState([]);
-      const [busy, setBusy] = useState(true);
+      const [history, setHistory] = useState([]); const [busy, setBusy] = useState(true);
       useEffect(() => { api.getHistory().then(r => { if (r.status === 'ok') setHistory(r.data); setBusy(false); }).catch(() => setBusy(false)); }, []);
       if (busy) return <div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading history...</div></div>;
       if (history.length === 0) return <div className="empty"><div className="empty-icon">📜</div><h3>No scan history</h3><p>Run your first scan to start building history.</p></div>;
-      return (
-        <div>
-          {history.map((entry, idx) => (
-            <div className="row" key={entry.id} style={{ animationDelay: `${idx * 0.03}s`, cursor: 'pointer' }} onClick={() => onLoadScan(entry.id)}>
-              <div className="num-badge mono" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 10, width: 32, height: 32 }}>#{history.length - idx}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row-title">{new Date(entry.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-                <div className="row-sub"><span>{entry.reposScanned} repos</span><span className="sep">·</span><span>{entry.totalItems} items</span><span className="sep">·</span><span>{entry.elapsed}</span></div>
-              </div>
-              <span className="btn btn-sm">Load</span>
-            </div>
-          ))}
-        </div>
-      );
+      return (<div>{history.map((entry, idx) => (<div className="row" key={entry.id} style={{ animationDelay: `${idx * 0.03}s`, cursor: 'pointer' }} onClick={() => onLoadScan(entry.id)}><div className="num-badge mono" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 10, width: 32, height: 32 }}>#{history.length - idx}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{new Date(entry.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div><div className="row-sub"><span>{entry.reposScanned} repos</span><span className="sep">·</span><span>{entry.totalItems} items</span><span className="sep">·</span><span>{entry.elapsed}</span></div></div><span className="btn btn-sm">Load</span></div>))}</div>);
     }
 
-    // ─── Panel Router ────────────────────────────────────────────
     const PANELS = { overview: OverviewPanel, builds: BuildsPanel, prs: PRsPanel, security: SecurityPanel, tokens: TokensPanel, issues: IssuesPanel, branches: BranchesPanel, history: HistoryPanel };
 
     // ─── Main App ────────────────────────────────────────────────
@@ -393,15 +408,20 @@
       const [settingsOpen, setSettingsOpen] = useState(false);
       const [exportOpen, setExportOpen] = useState(false);
       const [scannerConfig, setScannerConfig] = useState(null);
+      const [scanRules, setScanRules] = useState(null);
+      const [rateLimit, setRateLimit] = useState(null);
+      const [notifications, setNotifications] = useState(null);
+      const [theme, setTheme] = useState(getTheme());
+      const exportRef = useRef();
+
+      useOutsideClick(exportRef, () => setExportOpen(false));
+
+      const toggleTheme = () => { const t = theme === 'dark' ? 'light' : 'dark'; setTheme(t); applyTheme(t); };
 
       useEffect(() => {
         api.checkAuth().then(res => {
-          if (res.enabled) {
-            setAuthRequired(true);
-            if (authToken) {
-              api.status().then(s => { if (s.status === 'ok') setAuthenticated(true); else clearAuthToken(); }).catch(() => clearAuthToken());
-            }
-          } else { setAuthRequired(false); setAuthenticated(true); }
+          if (res.enabled) { setAuthRequired(true); if (authToken) { api.status().then(s => { if (s.status === 'ok') setAuthenticated(true); else clearAuthToken(); }).catch(() => clearAuthToken()); } }
+          else { setAuthRequired(false); setAuthenticated(true); }
         }).catch(() => { setAuthRequired(false); setAuthenticated(true); });
       }, []);
 
@@ -411,51 +431,51 @@
           if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setSummaryLoading(true); api.getSummary().then(s => { if (s.status === 'ok') setSummary(s.data); }).finally(() => setSummaryLoading(false)); }
           setLoading(false);
         }).catch(() => setLoading(false));
-        api.getConfig().then(res => { if (res.status === 'ok') setScannerConfig(res.data); });
+        api.getConfig().then(r => { if (r.status === 'ok') setScannerConfig(r.data); });
+        api.getRules().then(r => { if (r.status === 'ok') setScanRules(r.data); });
+        api.getRateLimit().then(r => { if (r.status === 'ok') setRateLimit(r.data); });
+        api.getNotifications().then(r => { if (r.status === 'ok') setNotifications(r.data); });
       }, [authenticated]);
 
       const handleScan = useCallback(async () => {
         setScanning(true); setViewingHistorical(false);
         try {
           const res = await api.runScan();
-          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setToast('✅ Scan complete!'); setSummaryLoading(true); setSummary(null); api.getSummary().then(s => { if (s.status === 'ok') setSummary(s.data); }).finally(() => setSummaryLoading(false)); }
+          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setToast('✅ Scan complete!'); setSummaryLoading(true); setSummary(null); api.getSummary().then(s => { if (s.status === 'ok') setSummary(s.data); }).finally(() => setSummaryLoading(false)); api.getRateLimit().then(r => { if (r.status === 'ok') setRateLimit(r.data); }); }
           else setToast('❌ ' + (res.message || 'Scan failed'));
-        } catch (err) { setToast('❌ ' + err.message); }
-        finally { setScanning(false); }
+        } catch (err) { setToast('❌ ' + err.message); } finally { setScanning(false); }
       }, []);
 
       const handleDigest = useCallback(async () => {
         setScanning(true); setViewingHistorical(false);
         try {
           const res = await api.sendDigest();
-          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setToast('📧 Digest emailed!'); }
+          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setToast('📧 Digest emailed!'); api.getRateLimit().then(r => { if (r.status === 'ok') setRateLimit(r.data); }); }
           else setToast('❌ ' + (res.message || 'Failed'));
-        } catch (err) { setToast('❌ ' + err.message); }
-        finally { setScanning(false); }
+        } catch (err) { setToast('❌ ' + err.message); } finally { setScanning(false); }
       }, []);
 
       const handleDeleteBranch = useCallback(async (item) => {
         const [owner, repo] = item.repo.split('/');
         try {
           const res = await api.deleteBranch(owner, repo, item.branch);
-          if (res.status === 'ok') { setData(prev => ({ ...prev, branches: { ...prev.branches, items: prev.branches.items.filter(b => !(b.repo === item.repo && b.branch === item.branch)), count: prev.branches.count - 1 }, meta: { ...prev.meta, totalItems: prev.meta.totalItems - 1 } })); setToast('🗑️ Deleted branch "' + item.branch + '"'); }
+          if (res.status === 'ok') { setData(prev => ({ ...prev, branches: { ...prev.branches, items: prev.branches.items.filter(b => !(b.repo === item.repo && b.branch === item.branch)), count: prev.branches.count - 1 }, meta: { ...prev.meta, totalItems: prev.meta.totalItems - 1 } })); setToast('🗑️ Deleted "' + item.branch + '"'); }
           else setToast('❌ ' + (res.message || 'Delete failed'));
         } catch (err) { setToast('❌ ' + err.message); }
       }, []);
 
       const handleToggleScanner = useCallback(async (name, enabled) => {
-        const current = scannerConfig?.enabled || [];
-        const updated = enabled ? [...current, name] : current.filter(s => s !== name);
-        try { const res = await api.setConfig(updated); if (res.status === 'ok') setScannerConfig(prev => ({ ...prev, enabled: res.data.enabled })); }
-        catch (err) { setToast('❌ ' + err.message); }
+        const current = scannerConfig?.enabled || []; const updated = enabled ? [...current, name] : current.filter(s => s !== name);
+        try { const res = await api.setConfig(updated); if (res.status === 'ok') setScannerConfig(prev => ({ ...prev, enabled: res.data.enabled })); } catch (err) { setToast('❌ ' + err.message); }
       }, [scannerConfig]);
 
+      const handleRuleChange = useCallback(async (rules) => {
+        try { const res = await api.setRules(rules); if (res.status === 'ok') setScanRules(res.data); } catch (err) { setToast('❌ ' + err.message); }
+      }, []);
+
       const handleLoadHistorical = useCallback(async (id) => {
-        try {
-          const res = await api.loadScan(id);
-          if (res.status === 'ok') { setData(res.data); setDiff(null); setSummary(null); setViewingHistorical(true); setActiveTab('overview'); setToast('📜 Loaded historical scan'); }
-          else setToast('❌ ' + (res.message || 'Failed'));
-        } catch (err) { setToast('❌ ' + err.message); }
+        try { const res = await api.loadScan(id); if (res.status === 'ok') { setData(res.data); setDiff(null); setSummary(null); setViewingHistorical(true); setActiveTab('overview'); setToast('📜 Loaded historical scan'); } else setToast('❌ ' + (res.message || 'Failed')); }
+        catch (err) { setToast('❌ ' + err.message); }
       }, []);
 
       const handleBackToLatest = useCallback(() => {
@@ -463,18 +483,18 @@
         api.getScan().then(res => { if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); } setLoading(false); }).catch(() => setLoading(false));
       }, []);
 
+      const handleLogout = useCallback(() => { clearAuthToken(); setAuthenticated(false); setAuthRequired(true); setSettingsOpen(false); }, []);
+
       if (authRequired === null) return <div className="shell"><div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Connecting...</div></div></div>;
       if (authRequired && !authenticated) return <LoginScreen onLogin={() => setAuthenticated(true)} />;
       if (loading) return <div className="shell"><div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading dashboard...</div></div></div>;
 
-      if (!data) {
-        return (
-          <div className="shell">
-            <div className="header"><div className="header-left"><div className="logo">📊</div><div><h1>GitHub Digest</h1><div className="sub mono">Dashboard</div></div></div></div>
-            <div className="empty"><div className="empty-icon">🔍</div><h3>No scan data yet</h3><p>Run your first scan to see a full dashboard of your GitHub repos — builds, PRs, security alerts, and more.</p><button className="btn btn-primary" onClick={handleScan} disabled={scanning}>{scanning ? '⏳ Scanning...' : '🚀 Run First Scan'}</button></div>
-          </div>
-        );
-      }
+      if (!data) return (
+        <div className="shell">
+          <div className="header"><div className="header-left"><div className="logo">📊</div><div><h1>GitHub Digest</h1><div className="sub mono">Dashboard</div></div></div><div className="header-actions"><button className="btn btn-icon" onClick={toggleTheme} title="Toggle theme">{theme === 'dark' ? '☀️' : '🌙'}</button></div></div>
+          <div className="empty"><div className="empty-icon">🔍</div><h3>No scan data yet</h3><p>Run your first scan to see a full dashboard of your GitHub repos — builds, PRs, security alerts, and more.</p><button className="btn btn-primary" onClick={handleScan} disabled={scanning}>{scanning ? '⏳ Scanning...' : '🚀 Run First Scan'}</button></div>
+        </div>
+      );
 
       const Panel = PANELS[activeTab];
       const categoryInsights = summary?.categoryInsights || {};
@@ -487,15 +507,17 @@
               <div><h1>GitHub Digest</h1><div className="sub mono">{data.meta.reposScanned} repos · {data.meta.totalItems} items · {data.meta.elapsed}</div></div>
             </div>
             <div className="header-actions">
+              <RateLimitBar info={rateLimit} />
               <div className="status-row">
                 <div className="status-dot" style={{ background: viewingHistorical ? 'var(--yellow)' : 'var(--green)', boxShadow: viewingHistorical ? '0 0 8px rgba(240,192,32,0.4)' : '0 0 8px rgba(48,161,78,0.4)' }} />
                 <span className="mono">{viewingHistorical ? 'Historical' : 'Last: ' + new Date(data.meta.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
+              <button className="btn btn-icon" onClick={toggleTheme} title="Toggle theme">{theme === 'dark' ? '☀️' : '🌙'}</button>
               <div style={{ position: 'relative' }}>
-                <button className="btn" onClick={() => { setSettingsOpen(!settingsOpen); setExportOpen(false); }} title="Scanner settings">⚙️</button>
-                {settingsOpen && <SettingsPopover config={scannerConfig} onToggle={handleToggleScanner} onClose={() => setSettingsOpen(false)} />}
+                <button className="btn btn-icon" onClick={() => { setSettingsOpen(!settingsOpen); setExportOpen(false); }} title="Settings">⚙️</button>
+                {settingsOpen && <SettingsPopover config={scannerConfig} scanRules={scanRules} notifications={notifications} onToggle={handleToggleScanner} onRuleChange={handleRuleChange} onClose={() => setSettingsOpen(false)} onLogout={handleLogout} authEnabled={authRequired} />}
               </div>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative' }} ref={exportRef}>
                 <button className="btn" onClick={() => { setExportOpen(!exportOpen); setSettingsOpen(false); }}>📥 Export</button>
                 {exportOpen && (<div className="dropdown"><button className="dropdown-item" onClick={() => { api.exportJson(); setExportOpen(false); }}>📄 Download JSON</button><button className="dropdown-item" onClick={() => { api.exportCsv(); setExportOpen(false); }}>📊 Download CSV</button></div>)}
               </div>
@@ -504,12 +526,7 @@
             </div>
           </div>
 
-          {viewingHistorical && (
-            <div className="history-banner">
-              <span>📜 Viewing historical scan from {new Date(data.meta.lastRun).toLocaleString()}</span>
-              <button className="btn btn-sm" onClick={handleBackToLatest}>Back to Latest</button>
-            </div>
-          )}
+          {viewingHistorical && (<div className="history-banner"><span>📜 Viewing historical scan from {new Date(data.meta.lastRun).toLocaleString()}</span><button className="btn btn-sm" onClick={handleBackToLatest}>Back to Latest</button></div>)}
 
           <div className="stat-grid">
             {['builds', 'prs', 'security', 'tokens', 'issues', 'branches'].map((key, idx) => {
@@ -529,13 +546,7 @@
             {TABS.map(tab => {
               const count = tab.key !== 'overview' && tab.key !== 'history' ? data[tab.key]?.count : undefined;
               const d = diff && diff[tab.key];
-              return (
-                <button key={tab.key} className={`tab${activeTab === tab.key ? ' active' : ''}`} onClick={() => setActiveTab(tab.key)}>
-                  <span>{tab.icon}</span>{tab.label}
-                  {count !== undefined && <span className="badge mono">{count}</span>}
-                  {d && d.new > 0 && <span className="diff-badge diff-new">+{d.new}</span>}
-                </button>
-              );
+              return (<button key={tab.key} className={`tab${activeTab === tab.key ? ' active' : ''}`} onClick={() => setActiveTab(tab.key)}><span>{tab.icon}</span>{tab.label}{count !== undefined && <span className="badge mono">{count}</span>}{d && d.new > 0 && <span className="diff-badge diff-new">+{d.new}</span>}</button>);
             })}
           </div>
 

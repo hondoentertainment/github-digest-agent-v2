@@ -32,7 +32,7 @@ export function saveScan(scanResult) {
   while (history.length > MAX_HISTORY) {
     const removed = history.pop();
     const filePath = path.join(SCANS_DIR, `${removed.id}.json`);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch { /* best effort */ }
   }
 
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
@@ -43,7 +43,12 @@ export function getScan(id) {
   ensureDataDir();
   const filePath = path.join(SCANS_DIR, `${id}.json`);
   if (!fs.existsSync(filePath)) return null;
-  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  } catch (err) {
+    console.error(`Corrupt scan file ${id}.json:`, err.message);
+    return null;
+  }
 }
 
 export function getLatestScan() {
@@ -63,7 +68,8 @@ export function getHistory() {
   if (!fs.existsSync(HISTORY_FILE)) return [];
   try {
     return JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
-  } catch {
+  } catch (err) {
+    console.error("Corrupt history.json:", err.message);
     return [];
   }
 }
