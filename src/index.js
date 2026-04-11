@@ -12,6 +12,7 @@ import { generateDigest } from "./services/summarizer.js";
 import { sendDigestEmail } from "./services/mailer.js";
 import { sendNotifications } from "./services/notifier.js";
 import { isScannerEnabled } from "./utils/scannerConfig.js";
+import { loadPlugins } from "./utils/pluginLoader.js";
 
 const SCANNER_REGISTRY = [
   { key: "builds", fn: scanFailedBuilds, category: "Failed CI/Build Issues", emoji: "🔴" },
@@ -23,7 +24,7 @@ const SCANNER_REGISTRY = [
 ];
 
 /**
- * Run enabled scanners and return structured results.
+ * Run enabled scanners (built-in + plugins) and return structured results.
  */
 export async function runScan() {
   const startTime = Date.now();
@@ -32,6 +33,14 @@ export async function runScan() {
   console.log("📦 Fetching repositories...");
   const repos = await getAllRepos();
   console.log(`   Found ${repos.length} active repos\n`);
+
+  let plugins = [];
+  try {
+    plugins = await loadPlugins();
+    if (plugins.length) console.log(`🧩 Loaded ${plugins.length} plugin(s)`);
+  } catch (err) {
+    console.warn("Plugin loading failed:", err.message);
+  }
 
   console.log("🔍 Running scanners...");
   const results = await Promise.all(
@@ -50,9 +59,30 @@ export async function runScan() {
     })
   );
 
+  const pluginResults = await Promise.all(
+    plugins.map(async (plugin) => {
+      try {
+        const r = await plugin.scan(repos);
+        console.log(`   🧩 ${r.category}: ${r.count} items`);
+        return { key: plugin.key, ...r };
+      } catch (err) {
+        console.warn(`   ⚠️ Plugin ${plugin.key} failed:`, err.message);
+        return {
+          key: plugin.key, category: plugin.category, emoji: plugin.emoji,
+          count: 0, items: [], summary: `Plugin error: ${err.message}`,
+        };
+      }
+    })
+  );
+
   const [builds, prs, security, tokens, issues, branches] = results;
   const scanResults = { builds, prs, security, tokens, issues, branches };
-  const totalItems = Object.values(scanResults).reduce((sum, r) => sum + r.count, 0);
+
+  for (const pr of pluginResults) {
+    scanResults[pr.key] = pr;
+  }
+
+  const totalItems = Object.values(scanResults).reduce((sum, r) => sum + (r.count || 0), 0);
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
   console.log(`\n📊 Total items: ${totalItems} (${elapsed}s)`);
@@ -63,6 +93,7 @@ export async function runScan() {
       reposScanned: repos.length,
       totalItems,
       elapsed: `${elapsed}s`,
+      plugins: pluginResults.map((p) => p.key),
     },
     ...scanResults,
   };

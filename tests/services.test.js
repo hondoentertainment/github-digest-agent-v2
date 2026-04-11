@@ -1,14 +1,13 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-const { mockCreate, mockSendMail } = vi.hoisted(() => ({
-  mockCreate: vi.fn(),
+const { mockCompletion, mockSendMail } = vi.hoisted(() => ({
+  mockCompletion: vi.fn(),
   mockSendMail: vi.fn(),
 }));
 
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: vi.fn(function () {
-    return { messages: { create: mockCreate } };
-  }),
+vi.mock("../src/services/aiProvider.js", () => ({
+  createCompletion: mockCompletion,
+  getProviderName: vi.fn(() => "claude"),
 }));
 
 vi.mock("nodemailer", () => ({
@@ -26,10 +25,8 @@ import { sendDigestEmail } from "../src/services/mailer.js";
 describe("generateDigest", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns full HTML email with Claude response", async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ text: "<div>AI-generated summary here</div>" }],
-    });
+  it("returns full HTML email with AI response", async () => {
+    mockCompletion.mockResolvedValue("<div>AI-generated summary here</div>");
 
     const scanResults = [
       { category: "Builds", emoji: "🔴", count: 1, summary: "1 failure", items: [] },
@@ -40,13 +37,11 @@ describe("generateDigest", () => {
     expect(result).toContain("<!DOCTYPE html>");
     expect(result).toContain("GitHub Daily Digest");
     expect(result).toContain("AI-generated summary here");
-    expect(mockCreate).toHaveBeenCalledOnce();
+    expect(mockCompletion).toHaveBeenCalledOnce();
   });
 
   it("includes repo count and date in the email", async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ text: "<p>Summary</p>" }],
-    });
+    mockCompletion.mockResolvedValue("<p>Summary</p>");
 
     const result = await generateDigest(
       [{ category: "Test", emoji: "✅", count: 0, summary: "OK", items: [] }],
@@ -55,8 +50,8 @@ describe("generateDigest", () => {
     expect(result).toContain("12 repos scanned");
   });
 
-  it("returns fallback HTML when Claude API fails", async () => {
-    mockCreate.mockRejectedValue(new Error("API rate limit exceeded"));
+  it("returns fallback HTML when AI fails", async () => {
+    mockCompletion.mockRejectedValue(new Error("API rate limit exceeded"));
 
     const scanResults = [
       { category: "Builds", emoji: "🔴", count: 1, summary: "1 failure", items: [] },
@@ -74,15 +69,13 @@ describe("generateDigest", () => {
 describe("generateDashboardSummary", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns parsed JSON summary from Claude", async () => {
+  it("returns parsed JSON summary from AI", async () => {
     const summary = {
       topOfMind: "Fix failing builds immediately",
       actions: ["Review CI pipeline", "Update dependencies"],
       categoryInsights: { builds: "One build failing on main" },
     };
-    mockCreate.mockResolvedValue({
-      content: [{ text: JSON.stringify(summary) }],
-    });
+    mockCompletion.mockResolvedValue(JSON.stringify(summary));
 
     const scanData = {
       meta: { reposScanned: 5 },
@@ -100,10 +93,8 @@ describe("generateDashboardSummary", () => {
     expect(result.categoryInsights.builds).toBeDefined();
   });
 
-  it("handles malformed JSON from Claude", async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ text: "This is not valid JSON" }],
-    });
+  it("handles malformed JSON from AI", async () => {
+    mockCompletion.mockResolvedValue("This is not valid JSON");
 
     const scanData = {
       meta: { reposScanned: 3 },
@@ -115,8 +106,8 @@ describe("generateDashboardSummary", () => {
     expect(result.actions).toBeDefined();
   });
 
-  it("returns fallback when Claude API fails", async () => {
-    mockCreate.mockRejectedValue(new Error("Connection refused"));
+  it("returns fallback when AI fails", async () => {
+    mockCompletion.mockRejectedValue(new Error("Connection refused"));
 
     const scanData = {
       meta: { reposScanned: 5 },

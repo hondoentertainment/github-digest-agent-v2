@@ -5,7 +5,6 @@ dotenv.config();
 import { runDigest } from "./index.js";
 import { withScanLock } from "./utils/scanLock.js";
 import { saveScan } from "./utils/storage.js";
-import { sendNotifications } from "./services/notifier.js";
 
 import "./server.js";
 
@@ -15,9 +14,9 @@ console.log(`⏰ Digest cron scheduled: ${schedule}`);
 
 async function scheduledDigest() {
   try {
+    // runDigest() already calls sendNotifications() internally
     const result = await withScanLock(() => runDigest());
     saveScan(result);
-    await sendNotifications(result);
   } catch (err) {
     if (err.status === 409) {
       console.warn("⏭️ Skipping scheduled digest — scan already in progress");

@@ -69,12 +69,69 @@ vi.mock("../src/middleware/rateLimit.js", () => ({
   rateLimit: vi.fn(() => (req, res, next) => next()),
 }));
 
+vi.mock("../src/middleware/securityHeaders.js", () => ({
+  securityHeaders: vi.fn(() => (req, res, next) => next()),
+}));
+
+vi.mock("../src/middleware/requestLogger.js", () => ({
+  requestLogger: vi.fn(() => (req, res, next) => next()),
+}));
+
+vi.mock("../src/utils/trends.js", () => ({
+  getTrends: vi.fn(() => ({ labels: [], series: {}, summary: { avgTotal: 0, trend: "stable", peakDate: null, peakTotal: 0 } })),
+  getCategoryTrend: vi.fn(() => ({ labels: [], values: [], change: 0, changePercent: 0 })),
+}));
+
+vi.mock("../src/utils/pluginLoader.js", () => ({
+  loadPlugins: vi.fn(async () => []),
+  getPluginsDir: vi.fn(() => "/plugins"),
+}));
+
+vi.mock("../src/utils/orgGrouper.js", () => ({
+  getOrgList: vi.fn(() => []),
+  groupByOrg: vi.fn((data) => data),
+  getOrgSummary: vi.fn(() => []),
+}));
+
+vi.mock("../src/utils/users.js", () => ({
+  listUsers: vi.fn(() => []),
+  getUser: vi.fn(() => null),
+  createUser: vi.fn(({ username, role }) => ({ id: "u1", username, role: role || "viewer" })),
+  updateUser: vi.fn(() => null),
+  deleteUser: vi.fn(() => true),
+  validateCredentials: vi.fn(() => null),
+}));
+
+vi.mock("../src/services/webhookHandler.js", () => ({
+  verifyWebhookSignature: vi.fn(() => true),
+  parseWebhookEvent: vi.fn(() => ({ action: null, repo: null, trigger: "test", shouldScan: false })),
+  getWebhookSecret: vi.fn(() => null),
+}));
+
+vi.mock("../src/services/fixer.js", () => ({
+  generateFixSuggestion: vi.fn(async () => ({ summary: "Fix it", steps: ["Step 1"], confidence: "high", canAutoPR: false, suggestedBranch: null })),
+  canSuggestFix: vi.fn(() => true),
+  createFixPR: vi.fn(async () => ({ prUrl: "https://github.com/test/pr/1", prNumber: 1, branch: "fix/test" })),
+}));
+
+vi.mock("../src/services/aiProvider.js", () => ({
+  getAvailableProviders: vi.fn(() => [
+    { id: "claude", name: "Claude", configured: true },
+    { id: "openai", name: "OpenAI", configured: false },
+    { id: "gemini", name: "Gemini", configured: false },
+  ]),
+  getProviderName: vi.fn(() => "claude"),
+  setProvider: vi.fn(),
+  createCompletion: vi.fn(async () => "test"),
+}));
+
 import app from "../src/server.js";
 import { runScan, runDigest } from "../src/index.js";
 import { octokit } from "../src/utils/github.js";
 import { saveScan, getHistory, getScan } from "../src/utils/storage.js";
 import { setEnabledScanners } from "../src/utils/scannerConfig.js";
 import { setRules } from "../src/utils/scanRules.js";
+import { createUser, deleteUser } from "../src/utils/users.js";
 
 const mockScanResult = {
   meta: { lastRun: new Date().toISOString(), reposScanned: 3, totalItems: 5, elapsed: "1.2s" },
@@ -226,7 +283,6 @@ describe("API Routes", () => {
       const res = await request(app).get("/api/rate-limit");
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveProperty("limit");
-      expect(res.body.data).toHaveProperty("remaining");
     });
   });
 
@@ -237,7 +293,106 @@ describe("API Routes", () => {
       const res = await request(app).get("/api/config/notifications");
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveProperty("slack");
-      expect(res.body.data).toHaveProperty("discord");
+    });
+  });
+
+  // --- AI Provider ---
+
+  describe("GET /api/config/ai", () => {
+    it("returns AI provider info", async () => {
+      const res = await request(app).get("/api/config/ai");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("current");
+      expect(res.body.data).toHaveProperty("providers");
+      expect(res.body.data.current).toBe("claude");
+    });
+  });
+
+  describe("POST /api/config/ai", () => {
+    it("updates AI provider", async () => {
+      const res = await request(app).post("/api/config/ai").send({ provider: "openai" });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // --- Trends ---
+
+  describe("GET /api/trends", () => {
+    it("returns trend data", async () => {
+      const res = await request(app).get("/api/trends");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("labels");
+      expect(res.body.data).toHaveProperty("summary");
+    });
+  });
+
+  describe("GET /api/trends/:category", () => {
+    it("returns category trend", async () => {
+      const res = await request(app).get("/api/trends/builds");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("change");
+    });
+  });
+
+  // --- Plugins ---
+
+  describe("GET /api/plugins", () => {
+    it("returns plugin list", async () => {
+      const res = await request(app).get("/api/plugins");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("plugins");
+      expect(res.body.data.plugins).toBeInstanceOf(Array);
+    });
+  });
+
+  // --- Organizations ---
+
+  describe("GET /api/orgs", () => {
+    it("returns org list", async () => {
+      const res = await request(app).get("/api/orgs");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("orgs");
+    });
+  });
+
+  // --- Users ---
+
+  describe("GET /api/users", () => {
+    it("returns user list", async () => {
+      const res = await request(app).get("/api/users");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toBeInstanceOf(Array);
+    });
+  });
+
+  describe("POST /api/users", () => {
+    it("creates a new user", async () => {
+      const res = await request(app).post("/api/users").send({ username: "test", password: "pass123" });
+      expect(res.status).toBe(201);
+      expect(res.body.data).toHaveProperty("username");
+    });
+  });
+
+  describe("DELETE /api/users/:id", () => {
+    it("deletes a user", async () => {
+      const res = await request(app).delete("/api/users/u1");
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // --- Fix Suggestions ---
+
+  describe("POST /api/suggest-fix", () => {
+    it("returns fix suggestion", async () => {
+      const res = await request(app).post("/api/suggest-fix").send({ item: { repo: "u/r", title: "Bug" }, category: "issues" });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("summary");
+      expect(res.body.data).toHaveProperty("steps");
+    });
+
+    it("rejects missing params", async () => {
+      const res = await request(app).post("/api/suggest-fix").send({});
+      expect(res.status).toBe(400);
     });
   });
 

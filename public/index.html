@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="/manifest.json" />
   <title>GitHub Digest Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <style>
@@ -162,12 +166,31 @@
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 
+    .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+    .chart-wrap h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .trend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .trend-stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+    .trend-stat .val { font-size: 24px; font-weight: 700; }
+    .trend-stat .lbl { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+    .org-select { padding: 6px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 12px; font-family: 'DM Sans', sans-serif; outline: none; cursor: pointer; }
+    .org-select:focus { border-color: var(--accent); }
+    .fix-btn { background: none; border: 1px solid rgba(88,166,255,0.3); border-radius: 6px; color: var(--accent); font-size: 11px; padding: 4px 10px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
+    .fix-btn:hover { background: var(--accent-bg); }
+    .fix-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .fix-modal { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; }
+    .fix-modal-body { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 16px; padding: 28px; width: 100%; max-width: 520px; max-height: 80vh; overflow-y: auto; animation: fadeUp 0.3s ease both; }
+    .fix-step { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .fix-step:last-child { border-bottom: none; }
+    .install-banner { background: var(--accent-bg); border: 1px solid rgba(88,166,255,0.3); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--accent); }
+
     @media (max-width: 600px) {
       .shell { padding: 16px 12px 40px; }
       .stat-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
       .stat-card { padding: 12px 10px; }
       .stat-count { font-size: 22px; }
       .header h1 { font-size: 18px; }
+      .header-actions { gap: 4px; }
+      .btn { padding: 6px 10px; font-size: 12px; }
     }
   </style>
 </head>
@@ -219,6 +242,15 @@
       getNotifications: () => fetch('/api/config/notifications', { headers: apiHeaders() }).then(r => r.json()),
       exportJson: async () => { const res = await fetch('/api/export/json', { headers: apiHeaders() }); const blob = await res.blob(); downloadBlob(blob, `github-digest-${new Date().toISOString().slice(0,10)}.json`); },
       exportCsv: async () => { const res = await fetch('/api/export/csv', { headers: apiHeaders() }); const blob = await res.blob(); downloadBlob(blob, `github-digest-${new Date().toISOString().slice(0,10)}.csv`); },
+      getTrends: (days) => fetch(`/api/trends?days=${days||30}`, { headers: apiHeaders() }).then(r => r.json()),
+      getOrgs: () => fetch('/api/orgs', { headers: apiHeaders() }).then(r => r.json()),
+      getPlugins: () => fetch('/api/plugins', { headers: apiHeaders() }).then(r => r.json()),
+      getUsers: () => fetch('/api/users', { headers: apiHeaders() }).then(r => r.json()),
+      createUser: (d) => fetch('/api/users', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).then(r => r.json()),
+      removeUser: (id) => fetch(`/api/users/${id}`, { method: 'DELETE', headers: apiHeaders() }).then(r => r.json()),
+      getAiConfig: () => fetch('/api/config/ai', { headers: apiHeaders() }).then(r => r.json()),
+      setAiProvider: (p) => fetch('/api/config/ai', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: p }) }).then(r => r.json()),
+      suggestFix: (item, category) => fetch('/api/suggest-fix', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ item, category }) }).then(r => r.json()),
     };
 
     // ─── Helpers ─────────────────────────────────────────────────
@@ -236,6 +268,7 @@
       { key: 'issues', label: 'Issues', icon: '🐛' },
       { key: 'branches', label: 'Branches', icon: '🌿' },
       { key: 'history', label: 'History', icon: '📜' },
+      { key: 'trends', label: 'Trends', icon: '📈' },
     ];
 
     // ─── Outside-click hook ──────────────────────────────────────
@@ -281,8 +314,114 @@
       );
     }
 
+    // ─── SVG Mini Chart ─────────────────────────────────────────
+    function MiniChart({ labels, values, color = 'var(--accent)', height = 120, width = '100%' }) {
+      if (!values || values.length === 0) return <div style={{ color: 'var(--text-dim)', fontSize: 12, padding: 20, textAlign: 'center' }}>No data</div>;
+      const max = Math.max(...values, 1);
+      const vW = 600, vH = 150, pad = 20;
+      const pts = values.map((v, i) => {
+        const x = pad + (i / Math.max(values.length - 1, 1)) * (vW - pad * 2);
+        const y = vH - pad - (v / max) * (vH - pad * 2);
+        return `${x},${y}`;
+      });
+      const line = pts.join(' ');
+      const area = `${pad},${vH - pad} ${line} ${vW - pad},${vH - pad}`;
+      const step = Math.max(1, Math.floor(labels.length / 6));
+      return (
+        <svg viewBox={`0 0 ${vW} ${vH}`} style={{ width, height, display: 'block' }}>
+          {[0, 0.25, 0.5, 0.75, 1].map(f => {
+            const y = vH - pad - f * (vH - pad * 2);
+            return <line key={f} x1={pad} y1={y} x2={vW - pad} y2={y} stroke="var(--border)" strokeWidth="0.5" />;
+          })}
+          <polygon points={area} fill={color} opacity="0.08" />
+          <polyline points={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          {values.map((v, i) => {
+            const x = pad + (i / Math.max(values.length - 1, 1)) * (vW - pad * 2);
+            const y = vH - pad - (v / max) * (vH - pad * 2);
+            return <circle key={i} cx={x} cy={y} r="3" fill={color} opacity={i === values.length - 1 ? 1 : 0.5}><title>{labels[i]}: {v}</title></circle>;
+          })}
+          {labels.map((l, i) => i % step === 0 ? <text key={i} x={pad + (i / Math.max(labels.length - 1, 1)) * (vW - pad * 2)} y={vH - 2} textAnchor="middle" fill="var(--text-dim)" fontSize="10" fontFamily="JetBrains Mono, monospace">{l.slice(5)}</text> : null)}
+        </svg>
+      );
+    }
+
+    // ─── Trends Panel ────────────────────────────────────────────
+    function TrendsPanel() {
+      const [trends, setTrends] = useState(null);
+      const [days, setDays] = useState(30);
+      const [busy, setBusy] = useState(true);
+      useEffect(() => {
+        setBusy(true);
+        api.getTrends(days).then(r => { if (r.status === 'ok') setTrends(r.data); setBusy(false); }).catch(() => setBusy(false));
+      }, [days]);
+      if (busy) return <div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading trends...</div></div>;
+      if (!trends || !trends.labels.length) return <div className="empty"><div className="empty-icon">📈</div><h3>No trend data</h3><p>Run multiple scans over time to see trends.</p></div>;
+      const s = trends.summary;
+      const trendColor = s.trend === 'improving' ? 'var(--green)' : s.trend === 'worsening' ? 'var(--red)' : 'var(--text-dim)';
+      const trendIcon = s.trend === 'improving' ? '↓' : s.trend === 'worsening' ? '↑' : '→';
+      return (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 16 }}>
+            {[7, 14, 30, 90].map(d => <button key={d} className={`btn btn-sm ${days === d ? 'btn-primary' : ''}`} onClick={() => setDays(d)}>{d}d</button>)}
+          </div>
+          <div className="trend-grid">
+            <div className="trend-stat"><div className="val mono" style={{ color: trendColor }}>{trendIcon} {s.trend}</div><div className="lbl">Overall Trend</div></div>
+            <div className="trend-stat"><div className="val mono">{s.avgTotal.toFixed(1)}</div><div className="lbl">Avg Items/Scan</div></div>
+            <div className="trend-stat"><div className="val mono">{s.peakTotal}</div><div className="lbl">Peak ({s.peakDate ? s.peakDate.slice(5) : '-'})</div></div>
+            <div className="trend-stat"><div className="val mono">{trends.labels.length}</div><div className="lbl">Data Points</div></div>
+          </div>
+          <div className="chart-wrap"><h3>📊 Total Items Over Time</h3><MiniChart labels={trends.labels} values={trends.series.total} color="var(--accent)" height={160} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+            {Object.entries(STAT_COLORS).map(([key, color]) => (
+              <div className="chart-wrap" key={key}><h3>{SCANNER_ICONS[key]} {key}</h3><MiniChart labels={trends.labels} values={trends.series[key]} color={color} height={100} /></div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Fix Suggestion Modal ────────────────────────────────────
+    function FixModal({ item, category, onClose }) {
+      const [suggestion, setSuggestion] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      useEffect(() => {
+        api.suggestFix(item, category).then(r => {
+          if (r.status === 'ok') setSuggestion(r.data);
+          else setError(r.message || 'Failed to get suggestion');
+          setLoading(false);
+        }).catch(e => { setError(e.message); setLoading(false); });
+      }, []);
+      return (
+        <div className="fix-modal" onClick={onClose}>
+          <div className="fix-modal-body" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16 }}>🔧 AI Fix Suggestion</h3>
+              <button className="btn btn-sm" onClick={onClose}>✕</button>
+            </div>
+            {loading ? <div className="loading-wrap" style={{ minHeight: 100 }}><div className="spinner" /><div className="mono" style={{ fontSize: 12, color: 'var(--text-dim)' }}>Analyzing...</div></div>
+            : error ? <div style={{ color: 'var(--red)', fontSize: 13 }}>{error}</div>
+            : suggestion && (
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>{suggestion.summary}</div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <SevBadge severity={suggestion.confidence === 'high' ? 'low' : suggestion.confidence === 'low' ? 'high' : 'medium'} />
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{suggestion.confidence} confidence</span>
+                  {suggestion.suggestedBranch && <code>{suggestion.suggestedBranch}</code>}
+                </div>
+                <div className="actions-title mono">Steps</div>
+                {suggestion.steps.map((step, i) => (
+                  <div className="fix-step" key={i}><span className="action-num mono">{i + 1}</span><span style={{ color: 'var(--text-secondary)' }}>{step}</span></div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     // ─── Settings Popover ────────────────────────────────────────
-    function SettingsPopover({ config, scanRules, notifications, onToggle, onRuleChange, onClose, onLogout, authEnabled }) {
+    function SettingsPopover({ config, scanRules, notifications, aiConfig, plugins, onToggle, onRuleChange, onAiChange, onClose, onLogout, authEnabled }) {
       const ref = useRef();
       useOutsideClick(ref, onClose);
       const all = config?.all || [];
@@ -312,6 +451,25 @@
           <div className="config-field"><label>Build window (hours)</label><input type="number" className="config-input" value={localRules.buildWindowHours || 24} onChange={e => handleRuleChange('buildWindowHours', parseInt(e.target.value) || 24)} /></div>
           <div className="config-field"><label>Min severity</label><select className="config-select" value={localRules.severityThreshold || 'low'} onChange={e => handleRuleChange('severityThreshold', e.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
           <div className="config-field"><label>Max items/scanner</label><input type="number" className="config-input" value={localRules.maxItemsPerScanner || 100} onChange={e => handleRuleChange('maxItemsPerScanner', parseInt(e.target.value) || 100)} /></div>
+
+          {aiConfig && (
+            <div style={{ marginTop: 16 }}>
+              <div className="popover-title">AI Provider</div>
+              <div className="config-field">
+                <label>Provider</label>
+                <select className="config-select" value={aiConfig.current || 'claude'} onChange={e => onAiChange(e.target.value)}>
+                  {(aiConfig.providers || []).map(p => <option key={p.id} value={p.id} disabled={!p.configured}>{p.name}{p.configured ? '' : ' (no key)'}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {plugins && plugins.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div className="popover-title">Plugins ({plugins.length})</div>
+              {plugins.map(p => <div key={p.key} className="toggle-row"><label><span>{p.emoji}</span><span>{p.category}</span></label><span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{p.key}</span></div>)}
+            </div>
+          )}
 
           {notifications && (
             <div style={{ marginTop: 16 }}>
@@ -374,11 +532,11 @@
     }
 
     // ─── Category Panels ─────────────────────────────────────────
-    function BuildsPanel({ data, insight }) { const items = data.builds?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">✅</div><h3>All builds passing</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="dot" style={{ background: 'var(--red)', boxShadow: '0 0 8px rgba(255,45,32,0.4)' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><span className="row-title">{item.repo}</span><code>{item.workflow}</code><code style={{ color: 'var(--accent)' }}>{item.branch}</code></div><div className="row-sub">{item.message}</div></div><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>); }
+    function BuildsPanel({ data, insight, onFixClick }) { const items = data.builds?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">✅</div><h3>All builds passing</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="dot" style={{ background: 'var(--red)', boxShadow: '0 0 8px rgba(255,45,32,0.4)' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><span className="row-title">{item.repo}</span><code>{item.workflow}</code><code style={{ color: 'var(--accent)' }}>{item.branch}</code></div><div className="row-sub">{item.message}</div></div><button className="fix-btn" onClick={e => { e.stopPropagation(); onFixClick(item, 'builds'); }}>🔧 Fix</button><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>); }
     function PRsPanel({ data, insight }) { const items = data.prs?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open PRs</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.draft ? 'var(--border)' : 'var(--green-bg)', color: item.draft ? 'var(--text-dim)' : 'var(--green)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}{item.draft && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>draft</span>}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div><div className="row-right" style={{ fontSize: 11, color: item.reviewCount > 0 ? 'var(--green)' : 'var(--text-dim)' }}>{item.reviewCount > 0 ? `${item.reviewCount} review${item.reviewCount > 1 ? 's' : ''}` : 'No reviews'}</div></div>))}</div>); }
-    function SecurityPanel({ data, insight }) { const items = data.security?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔒</div><h3>No security alerts</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><code>{item.package}</code><span className="sep">·</span><span>{item.type}</span></div></div><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>); }
+    function SecurityPanel({ data, insight, onFixClick }) { const items = data.security?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔒</div><h3>No security alerts</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><code>{item.package}</code><span className="sep">·</span><span>{item.type}</span></div></div><button className="fix-btn" onClick={e => { e.stopPropagation(); onFixClick(item, 'security'); }}>🔧 Fix</button><span className="row-right" style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(item.created)}</span></div>))}</div>); }
     function TokensPanel({ data, insight }) { const items = data.tokens?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🔐</div><h3>All credentials valid</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><SevBadge severity={item.severity} /><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.type}</span></div></div></div>))}</div>); }
-    function IssuesPanel({ data, insight }) { const items = data.issues?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open issues</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.isBug ? 'var(--orange-bg)' : 'var(--accent-bg)', color: item.isBug ? 'var(--orange)' : 'var(--accent)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span><span className="sep">·</span><span>{item.commentCount} 💬</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div></div>))}</div>); }
+    function IssuesPanel({ data, insight, onFixClick }) { const items = data.issues?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🎉</div><h3>No open issues</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s`, cursor: 'pointer' }} onClick={() => item.url && item.url !== '#' && window.open(item.url, '_blank')}><div className="num-badge mono" style={{ background: item.isBug ? 'var(--orange-bg)' : 'var(--accent-bg)', color: item.isBug ? 'var(--orange)' : 'var(--accent)' }}>#{item.number}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{item.title}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d old</span><span className="sep">·</span><span>{item.commentCount} 💬</span>{(item.labels || []).map(l => <LabelBadge key={l} label={l} />)}</div></div><button className="fix-btn" onClick={e => { e.stopPropagation(); onFixClick(item, 'issues'); }}>🔧 Fix</button></div>))}</div>); }
     function BranchesPanel({ data, insight, onDeleteBranch }) { const items = data.branches?.items || []; return (<div>{insight && <div className="insight">{insight}</div>}{items.length === 0 && <div className="empty"><div className="empty-icon">🧹</div><h3>No stale branches</h3></div>}{items.map((item, idx) => (<div className="row" key={idx} style={{ animationDelay: `${idx * 0.04}s` }}><span style={{ fontSize: 16, flexShrink: 0 }}>🌿</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><code style={{ fontSize: 13, fontWeight: 600 }}>{item.branch}</code>{item.protected && <span style={{ fontSize: 10, color: 'var(--yellow)', fontWeight: 600 }}>⚠️ PROTECTED</span>}</div><div className="row-sub"><span>{item.repo}</span><span className="sep">·</span><span>{item.ageDays}d stale</span><span className="sep">·</span><span>by {item.author}</span></div></div><button className="btn-delete mono" disabled={item.protected} onClick={(e) => { e.stopPropagation(); if (confirm(`Delete branch "${item.branch}" from ${item.repo}?`)) onDeleteBranch(item); }}>{item.protected ? '🔒' : 'Delete'}</button></div>))}</div>); }
 
     // ─── Panel: History ──────────────────────────────────────────
@@ -390,7 +548,7 @@
       return (<div>{history.map((entry, idx) => (<div className="row" key={entry.id} style={{ animationDelay: `${idx * 0.03}s`, cursor: 'pointer' }} onClick={() => onLoadScan(entry.id)}><div className="num-badge mono" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 10, width: 32, height: 32 }}>#{history.length - idx}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{new Date(entry.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div><div className="row-sub"><span>{entry.reposScanned} repos</span><span className="sep">·</span><span>{entry.totalItems} items</span><span className="sep">·</span><span>{entry.elapsed}</span></div></div><span className="btn btn-sm">Load</span></div>))}</div>);
     }
 
-    const PANELS = { overview: OverviewPanel, builds: BuildsPanel, prs: PRsPanel, security: SecurityPanel, tokens: TokensPanel, issues: IssuesPanel, branches: BranchesPanel, history: HistoryPanel };
+    const PANELS = { overview: OverviewPanel, builds: BuildsPanel, prs: PRsPanel, security: SecurityPanel, tokens: TokensPanel, issues: IssuesPanel, branches: BranchesPanel, history: HistoryPanel, trends: TrendsPanel };
 
     // ─── Main App ────────────────────────────────────────────────
     function App() {
@@ -411,6 +569,12 @@
       const [scanRules, setScanRules] = useState(null);
       const [rateLimit, setRateLimit] = useState(null);
       const [notifications, setNotifications] = useState(null);
+      const [aiConfig, setAiConfig] = useState(null);
+      const [plugins, setPlugins] = useState([]);
+      const [orgs, setOrgs] = useState([]);
+      const [orgFilter, setOrgFilter] = useState(null);
+      const [fixTarget, setFixTarget] = useState(null);
+      const [installPrompt, setInstallPrompt] = useState(null);
       const [theme, setTheme] = useState(getTheme());
       const exportRef = useRef();
 
@@ -435,7 +599,16 @@
         api.getRules().then(r => { if (r.status === 'ok') setScanRules(r.data); });
         api.getRateLimit().then(r => { if (r.status === 'ok') setRateLimit(r.data); });
         api.getNotifications().then(r => { if (r.status === 'ok') setNotifications(r.data); });
+        api.getAiConfig().then(r => { if (r.status === 'ok') setAiConfig(r.data); });
+        api.getPlugins().then(r => { if (r.status === 'ok') setPlugins(r.data.plugins || []); });
+        api.getOrgs().then(r => { if (r.status === 'ok') setOrgs(r.data.orgs || []); });
       }, [authenticated]);
+
+      useEffect(() => {
+        const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+      }, []);
 
       const handleScan = useCallback(async () => {
         setScanning(true); setViewingHistorical(false);
@@ -485,6 +658,19 @@
 
       const handleLogout = useCallback(() => { clearAuthToken(); setAuthenticated(false); setAuthRequired(true); setSettingsOpen(false); }, []);
 
+      const handleAiChange = useCallback(async (provider) => {
+        try { const res = await api.setAiProvider(provider); if (res.status === 'ok') setAiConfig(res.data); } catch (err) { setToast('❌ ' + err.message); }
+      }, []);
+
+      const handleFixClick = useCallback((item, category) => { setFixTarget({ item, category }); }, []);
+
+      const handleInstall = useCallback(async () => {
+        if (!installPrompt) return;
+        installPrompt.prompt();
+        await installPrompt.userChoice;
+        setInstallPrompt(null);
+      }, [installPrompt]);
+
       if (authRequired === null) return <div className="shell"><div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Connecting...</div></div></div>;
       if (authRequired && !authenticated) return <LoginScreen onLogin={() => setAuthenticated(true)} />;
       if (loading) return <div className="shell"><div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading dashboard...</div></div></div>;
@@ -498,6 +684,17 @@
 
       const Panel = PANELS[activeTab];
       const categoryInsights = summary?.categoryInsights || {};
+      const filteredData = orgFilter ? (() => {
+        const out = { ...data };
+        let total = 0;
+        ['builds','prs','security','tokens','issues','branches'].forEach(k => {
+          const items = (data[k]?.items || []).filter(i => i.repo && i.repo.startsWith(orgFilter + '/'));
+          out[k] = { ...data[k], items, count: items.length };
+          total += items.length;
+        });
+        out.meta = { ...data.meta, totalItems: total };
+        return out;
+      })() : data;
 
       return (
         <div className="shell">
@@ -507,6 +704,12 @@
               <div><h1>GitHub Digest</h1><div className="sub mono">{data.meta.reposScanned} repos · {data.meta.totalItems} items · {data.meta.elapsed}</div></div>
             </div>
             <div className="header-actions">
+              {orgs.length > 1 && (
+                <select className="org-select" value={orgFilter || ''} onChange={e => setOrgFilter(e.target.value || null)}>
+                  <option value="">All orgs</option>
+                  {orgs.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              )}
               <RateLimitBar info={rateLimit} />
               <div className="status-row">
                 <div className="status-dot" style={{ background: viewingHistorical ? 'var(--yellow)' : 'var(--green)', boxShadow: viewingHistorical ? '0 0 8px rgba(240,192,32,0.4)' : '0 0 8px rgba(48,161,78,0.4)' }} />
@@ -515,7 +718,7 @@
               <button className="btn btn-icon" onClick={toggleTheme} title="Toggle theme">{theme === 'dark' ? '☀️' : '🌙'}</button>
               <div style={{ position: 'relative' }}>
                 <button className="btn btn-icon" onClick={() => { setSettingsOpen(!settingsOpen); setExportOpen(false); }} title="Settings">⚙️</button>
-                {settingsOpen && <SettingsPopover config={scannerConfig} scanRules={scanRules} notifications={notifications} onToggle={handleToggleScanner} onRuleChange={handleRuleChange} onClose={() => setSettingsOpen(false)} onLogout={handleLogout} authEnabled={authRequired} />}
+                {settingsOpen && <SettingsPopover config={scannerConfig} scanRules={scanRules} notifications={notifications} aiConfig={aiConfig} plugins={plugins} onToggle={handleToggleScanner} onRuleChange={handleRuleChange} onAiChange={handleAiChange} onClose={() => setSettingsOpen(false)} onLogout={handleLogout} authEnabled={authRequired} />}
               </div>
               <div style={{ position: 'relative' }} ref={exportRef}>
                 <button className="btn" onClick={() => { setExportOpen(!exportOpen); setSettingsOpen(false); }}>📥 Export</button>
@@ -526,11 +729,12 @@
             </div>
           </div>
 
+          {installPrompt && (<div className="install-banner"><span>📱 Install GitHub Digest as an app</span><button className="btn btn-sm btn-primary" onClick={handleInstall}>Install</button></div>)}
           {viewingHistorical && (<div className="history-banner"><span>📜 Viewing historical scan from {new Date(data.meta.lastRun).toLocaleString()}</span><button className="btn btn-sm" onClick={handleBackToLatest}>Back to Latest</button></div>)}
 
           <div className="stat-grid">
             {['builds', 'prs', 'security', 'tokens', 'issues', 'branches'].map((key, idx) => {
-              const cat = data[key]; const color = STAT_COLORS[key]; const d = diff && diff[key];
+              const cat = filteredData[key]; const color = STAT_COLORS[key]; const d = diff && diff[key];
               return (
                 <div key={key} className={`stat-card${activeTab === key ? ' active' : ''}`} style={{ '--active-color': color, animationDelay: `${idx * 0.05}s`, animation: 'fadeUp 0.4s ease both' }} onClick={() => setActiveTab(key)}>
                   <div className="stat-emoji">{cat.emoji}</div>
@@ -551,17 +755,24 @@
           </div>
 
           <div className="panel" key={activeTab}>
-            {activeTab === 'overview' ? <Panel data={data} summary={summary} summaryLoading={summaryLoading} diff={diff} />
+            {activeTab === 'overview' ? <Panel data={filteredData} summary={summary} summaryLoading={summaryLoading} diff={diff} />
              : activeTab === 'history' ? <Panel onLoadScan={handleLoadHistorical} />
-             : <Panel data={data} insight={categoryInsights[activeTab]} onDeleteBranch={handleDeleteBranch} />}
+             : activeTab === 'trends' ? <Panel />
+             : <Panel data={filteredData} insight={categoryInsights[activeTab]} onDeleteBranch={handleDeleteBranch} onFixClick={handleFixClick} />}
           </div>
 
+          {fixTarget && <FixModal item={fixTarget.item} category={fixTarget.category} onClose={() => setFixTarget(null)} />}
           {toast && <Toast message={toast} onClose={() => setToast(null)} />}
         </div>
       );
     }
 
     ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function() {});
+    }
   </script>
 </body>
 </html>

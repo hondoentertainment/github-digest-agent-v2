@@ -10,11 +10,20 @@ import { octokit, getRateLimitInfo } from "./utils/github.js";
 import { saveScan, getLatestScan, getPreviousScan, getHistory, getScan } from "./utils/storage.js";
 import { authMiddleware, isAuthEnabled } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
+import { securityHeaders } from "./middleware/securityHeaders.js";
+import { requestLogger } from "./middleware/requestLogger.js";
 import { getEnabledScanners, setEnabledScanners, getAllScannerNames } from "./utils/scannerConfig.js";
 import { diffScans } from "./utils/diff.js";
 import { withScanLock, isScanLocked, getScanError } from "./utils/scanLock.js";
 import { getNotificationChannels } from "./services/notifier.js";
 import { getRules, setRules } from "./utils/scanRules.js";
+import { getTrends, getCategoryTrend } from "./utils/trends.js";
+import { loadPlugins, getPluginsDir } from "./utils/pluginLoader.js";
+import { getOrgList, groupByOrg, getOrgSummary } from "./utils/orgGrouper.js";
+import { listUsers, getUser, createUser, updateUser, deleteUser, validateCredentials } from "./utils/users.js";
+import { verifyWebhookSignature, parseWebhookEvent, getWebhookSecret } from "./services/webhookHandler.js";
+import { generateFixSuggestion, canSuggestFix, createFixPR } from "./services/fixer.js";
+import { getAvailableProviders, getProviderName, setProvider } from "./services/aiProvider.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -30,7 +39,9 @@ if (latestScan) {
   if (prev) latestDiff = diffScans(latestScan, prev);
 }
 
-// --- Middleware ---
+// --- Global Middleware ---
+app.use(securityHeaders());
+app.use(requestLogger());
 app.use(express.json({ limit: "1mb" }));
 
 // --- Public Routes (no auth required) ---
@@ -60,6 +71,39 @@ app.get("/api/status", (req, res) => {
   });
 });
 
+// Webhook endpoint (public — verified by signature)
+app.post("/api/webhooks/github", express.raw({ type: "application/json" }), async (req, res) => {
+  const secret = getWebhookSecret();
+  if (!secret) {
+    return res.status(501).json({ status: "error", message: "Webhooks not configured. Set WEBHOOK_SECRET." });
+  }
+
+  const signature = req.headers["x-hub-signature-256"];
+  const rawBody = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+  if (!verifyWebhookSignature(rawBody, signature, secret)) {
+    return res.status(401).json({ status: "error", message: "Invalid webhook signature." });
+  }
+
+  const eventType = req.headers["x-github-event"];
+  const parsed = parseWebhookEvent(req.body, eventType);
+
+  if (!parsed.shouldScan) {
+    return res.json({ status: "ok", action: "ignored", trigger: parsed.trigger });
+  }
+
+  res.json({ status: "ok", action: "scan_triggered", trigger: parsed.trigger });
+
+  try {
+    const previousScan = latestScan;
+    latestScan = await withScanLock(() => runScan());
+    saveScan(latestScan);
+    latestDiff = previousScan ? diffScans(latestScan, previousScan) : null;
+    console.log(`🪝 Webhook-triggered scan complete: ${parsed.trigger}`);
+  } catch (err) {
+    if (err.status !== 409) console.error("Webhook scan failed:", err.message);
+  }
+});
+
 // --- Auth Middleware (protects all routes defined below) ---
 app.use("/api", authMiddleware);
 
@@ -69,7 +113,9 @@ app.get("/api/scan", (req, res) => {
   if (!latestScan) {
     return res.json({ status: "no_data", message: "No scan has been run yet. POST /api/scan to trigger one." });
   }
-  res.json({ status: "ok", data: latestScan, diff: latestDiff });
+  const org = req.query.org || null;
+  const data = groupByOrg(latestScan, org);
+  res.json({ status: "ok", data, diff: latestDiff });
 });
 
 app.post("/api/scan", async (req, res) => {
@@ -184,6 +230,122 @@ app.get("/api/config/notifications", (req, res) => {
   res.json({ status: "ok", data: getNotificationChannels() });
 });
 
+// --- AI Provider ---
+
+app.get("/api/config/ai", (req, res) => {
+  res.json({
+    status: "ok",
+    data: { current: getProviderName(), providers: getAvailableProviders() },
+  });
+});
+
+app.post("/api/config/ai", (req, res) => {
+  const { provider } = req.body;
+  try {
+    setProvider(provider);
+    res.json({ status: "ok", data: { current: getProviderName(), providers: getAvailableProviders() } });
+  } catch (err) {
+    res.status(400).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Trends ---
+
+app.get("/api/trends", (req, res) => {
+  const days = parseInt(req.query.days) || 30;
+  res.json({ status: "ok", data: getTrends(days) });
+});
+
+app.get("/api/trends/:category", (req, res) => {
+  const days = parseInt(req.query.days) || 30;
+  res.json({ status: "ok", data: getCategoryTrend(req.params.category, days) });
+});
+
+// --- Plugins ---
+
+app.get("/api/plugins", async (req, res) => {
+  try {
+    const plugins = await loadPlugins();
+    res.json({
+      status: "ok",
+      data: {
+        dir: getPluginsDir(),
+        plugins: plugins.map((p) => ({ key: p.key, category: p.category, emoji: p.emoji })),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Organizations ---
+
+app.get("/api/orgs", (req, res) => {
+  if (!latestScan) return res.json({ status: "ok", data: { orgs: [], summary: [] } });
+  res.json({
+    status: "ok",
+    data: { orgs: getOrgList(latestScan), summary: getOrgSummary(latestScan) },
+  });
+});
+
+// --- Users ---
+
+app.get("/api/users", (req, res) => {
+  res.json({ status: "ok", data: listUsers() });
+});
+
+app.post("/api/users", (req, res) => {
+  try {
+    const user = createUser(req.body);
+    res.status(201).json({ status: "ok", data: user });
+  } catch (err) {
+    res.status(400).json({ status: "error", message: err.message });
+  }
+});
+
+app.put("/api/users/:id", (req, res) => {
+  try {
+    const user = updateUser(req.params.id, req.body);
+    if (!user) return res.status(404).json({ status: "error", message: "User not found." });
+    res.json({ status: "ok", data: user });
+  } catch (err) {
+    res.status(400).json({ status: "error", message: err.message });
+  }
+});
+
+app.delete("/api/users/:id", (req, res) => {
+  const ok = deleteUser(req.params.id);
+  if (!ok) return res.status(400).json({ status: "error", message: "Cannot delete user." });
+  res.json({ status: "ok" });
+});
+
+// --- AI Fix Suggestions ---
+
+app.post("/api/suggest-fix", async (req, res) => {
+  const { item, category } = req.body;
+  if (!item || !category) {
+    return res.status(400).json({ status: "error", message: "item and category are required." });
+  }
+  try {
+    const suggestion = await generateFixSuggestion(item, category);
+    res.json({ status: "ok", data: suggestion });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+app.post("/api/create-pr", async (req, res) => {
+  try {
+    const result = await createFixPR(req.body);
+    if (result.error) {
+      return res.status(result.status || 400).json({ status: "error", message: result.message });
+    }
+    res.json({ status: "ok", data: result });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // --- Export ---
 
 app.get("/api/export/json", (req, res) => {
@@ -256,7 +418,9 @@ if (process.env.NODE_ENV !== "test") {
   app.listen(PORT, () => {
     console.log(`\n🌐 GitHub Digest Dashboard running at http://localhost:${PORT}`);
     console.log(`🔒 Authentication: ${isAuthEnabled() ? "ENABLED" : "disabled"}`);
+    console.log(`🤖 AI Provider: ${getProviderName()}`);
     console.log(`🔍 Scanners: ${getEnabledScanners().join(", ")}`);
+    console.log(`🪝 Webhooks: ${getWebhookSecret() ? "ENABLED" : "disabled"}`);
     console.log(`📁 Scan history: ${getHistory().length} entries\n`);
   });
 }

@@ -1,8 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
-import dotenv from "dotenv";
-dotenv.config();
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { createCompletion } from "./aiProvider.js";
 
 /**
  * Generate a structured JSON summary for the web dashboard.
@@ -23,13 +19,8 @@ export async function generateDashboardSummary(scanData) {
 
   let raw;
   try {
-    const message = await client.messages.create({
-      model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
-      max_tokens: 1500,
-      messages: [
-        {
-          role: "user",
-          content: `You are a concise DevOps assistant analyzing a GitHub scan.
+    raw = await createCompletion({
+      prompt: `You are a concise DevOps assistant analyzing a GitHub scan.
 
 Repos scanned: ${scanData.meta?.reposScanned || 0}
 Total items: ${totalItems}
@@ -53,10 +44,9 @@ Respond ONLY with a JSON object (no markdown, no backticks):
     "branches": "One sentence insight or null"
   }
 }`,
-        },
-      ],
+      maxTokens: 1500,
     });
-    raw = message.content[0].text.replace(/```json|```/g, "").trim();
+    raw = raw.replace(/```json|```/g, "").trim();
   } catch (err) {
     console.error("Dashboard summary generation failed:", err.message);
     return {

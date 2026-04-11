@@ -27,13 +27,26 @@
 - [x] Dashboard dark/light theme toggle
 - [x] Rate limit budget display and management
 
-## Long-Term (v3.0)
+## v3.0 — Shipped
 
-- [ ] Plugin architecture for custom scanners
-- [ ] Organization-level scanning with team views
-- [ ] Trend analytics and historical charts
-- [ ] AI-powered fix suggestions with one-click PRs
-- [ ] Mobile-responsive PWA with push notifications
-- [ ] Multi-provider AI support (OpenAI, Gemini, local models)
-- [ ] Webhook-triggered scans (GitHub webhooks for real-time alerts)
-- [ ] Multi-user support (per-user GitHub tokens and email preferences)
+- [x] Plugin architecture for custom scanners
+- [x] Organization-level scanning with org filter
+- [x] Trend analytics and historical SVG charts
+- [x] AI-powered fix suggestions with confidence levels
+- [x] Mobile-responsive PWA with service worker
+- [x] Multi-provider AI support (Claude, OpenAI, Gemini)
+- [x] Webhook-triggered scans (GitHub webhooks with signature verification)
+- [x] Multi-user support (per-user accounts and preferences)
+- [x] Production hardening (security headers, structured request logging)
+- [x] Bug fixes (duplicate notifications, scheduler cleanup)
+
+## Future (v3.1+)
+
+- [ ] Real-time WebSocket updates for live scan progress
+- [ ] Team dashboards with role-based views
+- [ ] Scheduled reports with configurable frequency per user
+- [ ] Integration marketplace (Jira, Linear, PagerDuty)
+- [ ] Auto-fix PR creation with AI-generated code changes
+- [ ] Anomaly detection (alert on unusual spikes)
+- [ ] Multi-repo comparison views
+- [ ] Audit log for all dashboard actions

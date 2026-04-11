@@ -1,0 +1,11 @@
+{
+  "name": "GitHub Digest Dashboard",
+  "short_name": "GH Digest",
+  "description": "AI-powered GitHub repository health dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#010409",
+  "theme_color": "#0d1117",
+  "orientation": "any",
+  "icons": []
+}
