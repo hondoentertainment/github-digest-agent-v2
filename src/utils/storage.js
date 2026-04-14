@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { atomicWriteJson } from "./atomicWrite.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "../../data");
@@ -13,7 +14,20 @@ function ensureDataDir() {
   if (!fs.existsSync(SCANS_DIR)) fs.mkdirSync(SCANS_DIR, { recursive: true });
 }
 
+/**
+ * @param {unknown} scan
+ * @returns {boolean}
+ */
+function isValidScanShape(scan) {
+  if (!scan || typeof scan !== "object") return false;
+  if (!scan.meta || typeof scan.meta !== "object") return false;
+  return typeof scan.meta.lastRun === "string";
+}
+
 export function saveScan(scanResult) {
+  if (!isValidScanShape(scanResult)) {
+    throw new Error("Invalid scan result shape");
+  }
   ensureDataDir();
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const entry = {
@@ -24,7 +38,7 @@ export function saveScan(scanResult) {
     elapsed: scanResult.meta.elapsed,
   };
 
-  fs.writeFileSync(path.join(SCANS_DIR, `${id}.json`), JSON.stringify(scanResult, null, 2));
+  atomicWriteJson(path.join(SCANS_DIR, `${id}.json`), scanResult);
 
   const history = getHistory();
   history.unshift(entry);
@@ -32,11 +46,36 @@ export function saveScan(scanResult) {
   while (history.length > MAX_HISTORY) {
     const removed = history.pop();
     const filePath = path.join(SCANS_DIR, `${removed.id}.json`);
-    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch { /* best effort */ }
+    try {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch {
+      /* best effort */
+    }
   }
 
-  fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+  atomicWriteJson(HISTORY_FILE, history);
   return id;
+}
+
+/**
+ * Overwrite an existing scan JSON file without touching history (e.g. branch delete).
+ * @param {string} id
+ * @param {object} scanResult
+ */
+export function writeScanPayload(id, scanResult) {
+  if (!id || !isValidScanShape(scanResult)) return;
+  ensureDataDir();
+  const filePath = path.join(SCANS_DIR, `${id}.json`);
+  if (!fs.existsSync(filePath)) return;
+  atomicWriteJson(filePath, scanResult);
+}
+
+/**
+ * @returns {string|null}
+ */
+export function getLatestHistoryId() {
+  const history = getHistory();
+  return history.length ? history[0].id : null;
 }
 
 export function getScan(id) {
@@ -44,7 +83,12 @@ export function getScan(id) {
   const filePath = path.join(SCANS_DIR, `${id}.json`);
   if (!fs.existsSync(filePath)) return null;
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    if (!isValidScanShape(data)) {
+      console.error(`Scan ${id}.json failed schema check`);
+      return null;
+    }
+    return data;
   } catch (err) {
     console.error(`Corrupt scan file ${id}.json:`, err.message);
     return null;

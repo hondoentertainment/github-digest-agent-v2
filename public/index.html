@@ -213,7 +213,7 @@
     let authToken = sessionStorage.getItem('digest_auth') || '';
     function setAuthToken(t) { authToken = t; sessionStorage.setItem('digest_auth', t); }
     function clearAuthToken() { authToken = ''; sessionStorage.removeItem('digest_auth'); }
-    const apiHeaders = () => authToken ? { 'x-api-key': authToken } : {};
+    const apiHeaders = () => authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
 
     // ─── Download Helper ─────────────────────────────────────────
     function downloadBlob(blob, filename) {
@@ -223,34 +223,51 @@
     }
 
     // ─── API Layer ───────────────────────────────────────────────
+    const jsonFetch = (url, opts) =>
+      fetch(url, opts).then(async (r) => {
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) return { ...j, status: 'error' };
+        return j;
+      });
+
     const api = {
       checkAuth: () => fetch('/api/auth').then(r => r.json()),
-      login: (pw) => fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) }).then(r => r.json()),
-      status: () => fetch('/api/status', { headers: apiHeaders() }).then(r => r.json()),
-      getScan: () => fetch('/api/scan', { headers: apiHeaders() }).then(r => r.json()),
-      runScan: () => fetch('/api/scan', { method: 'POST', headers: apiHeaders() }).then(r => r.json()),
-      getSummary: () => fetch('/api/summary', { headers: apiHeaders() }).then(r => r.json()),
-      sendDigest: () => fetch('/api/digest', { method: 'POST', headers: apiHeaders() }).then(r => r.json()),
-      deleteBranch: (o, r, b) => fetch(`/api/branches/${o}/${r}/${encodeURIComponent(b)}`, { method: 'DELETE', headers: apiHeaders() }).then(r => r.json()),
-      getHistory: () => fetch('/api/history', { headers: apiHeaders() }).then(r => r.json()),
-      loadScan: (id) => fetch(`/api/history/${id}`, { headers: apiHeaders() }).then(r => r.json()),
-      getConfig: () => fetch('/api/config/scanners', { headers: apiHeaders() }).then(r => r.json()),
-      setConfig: (scanners) => fetch('/api/config/scanners', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ scanners }) }).then(r => r.json()),
-      getRules: () => fetch('/api/config/rules', { headers: apiHeaders() }).then(r => r.json()),
-      setRules: (rules) => fetch('/api/config/rules', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ rules }) }).then(r => r.json()),
-      getRateLimit: () => fetch('/api/rate-limit', { headers: apiHeaders() }).then(r => r.json()),
-      getNotifications: () => fetch('/api/config/notifications', { headers: apiHeaders() }).then(r => r.json()),
+      login: (body) => fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) return { ...j, status: 'error', _http: r.status }; return j; }),
+      status: () => jsonFetch('/api/status', { headers: apiHeaders() }),
+      getMe: () => jsonFetch('/api/me', { headers: apiHeaders() }),
+      getScan: () => jsonFetch('/api/scan', { headers: apiHeaders() }),
+      runScan: () => jsonFetch('/api/scan', { method: 'POST', headers: apiHeaders() }),
+      getSummary: () => jsonFetch('/api/summary', { headers: apiHeaders() }),
+      sendDigest: () => jsonFetch('/api/digest', { method: 'POST', headers: apiHeaders() }),
+      deleteBranch: (o, r, b) => jsonFetch(`/api/branches/${o}/${r}/${encodeURIComponent(b)}`, { method: 'DELETE', headers: apiHeaders() }),
+      getHistory: () => jsonFetch('/api/history', { headers: apiHeaders() }),
+      loadScan: (id) => jsonFetch(`/api/history/${id}`, { headers: apiHeaders() }),
+      getConfig: () => jsonFetch('/api/config/scanners', { headers: apiHeaders() }),
+      setConfig: (scanners) => jsonFetch('/api/config/scanners', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ scanners }) }),
+      getRules: () => jsonFetch('/api/config/rules', { headers: apiHeaders() }),
+      setRules: (rules) => jsonFetch('/api/config/rules', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ rules }) }),
+      getRateLimit: () => jsonFetch('/api/rate-limit', { headers: apiHeaders() }),
+      getNotifications: () => jsonFetch('/api/config/notifications', { headers: apiHeaders() }),
       exportJson: async () => { const res = await fetch('/api/export/json', { headers: apiHeaders() }); const blob = await res.blob(); downloadBlob(blob, `github-digest-${new Date().toISOString().slice(0,10)}.json`); },
       exportCsv: async () => { const res = await fetch('/api/export/csv', { headers: apiHeaders() }); const blob = await res.blob(); downloadBlob(blob, `github-digest-${new Date().toISOString().slice(0,10)}.csv`); },
-      getTrends: (days) => fetch(`/api/trends?days=${days||30}`, { headers: apiHeaders() }).then(r => r.json()),
-      getOrgs: () => fetch('/api/orgs', { headers: apiHeaders() }).then(r => r.json()),
-      getPlugins: () => fetch('/api/plugins', { headers: apiHeaders() }).then(r => r.json()),
-      getUsers: () => fetch('/api/users', { headers: apiHeaders() }).then(r => r.json()),
-      createUser: (d) => fetch('/api/users', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).then(r => r.json()),
-      removeUser: (id) => fetch(`/api/users/${id}`, { method: 'DELETE', headers: apiHeaders() }).then(r => r.json()),
-      getAiConfig: () => fetch('/api/config/ai', { headers: apiHeaders() }).then(r => r.json()),
-      setAiProvider: (p) => fetch('/api/config/ai', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: p }) }).then(r => r.json()),
-      suggestFix: (item, category) => fetch('/api/suggest-fix', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ item, category }) }).then(r => r.json()),
+      getTrends: (days) => jsonFetch(`/api/trends?days=${days || 30}`, { headers: apiHeaders() }),
+      getOrgs: () => jsonFetch('/api/orgs', { headers: apiHeaders() }),
+      getPlugins: () => jsonFetch('/api/plugins', { headers: apiHeaders() }),
+      getUsers: () => jsonFetch('/api/users', { headers: apiHeaders() }),
+      createUser: (d) => jsonFetch('/api/users', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(d) }),
+      removeUser: (id) => jsonFetch(`/api/users/${id}`, { method: 'DELETE', headers: apiHeaders() }),
+      getAiConfig: () => jsonFetch('/api/config/ai', { headers: apiHeaders() }),
+      setAiProvider: (p) => jsonFetch('/api/config/ai', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: p }) }),
+      suggestFix: (item, category) => jsonFetch('/api/suggest-fix', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ item, category }) }),
+      getEngineeringMetrics: () => jsonFetch('/api/metrics/engineering', { headers: apiHeaders() }),
+      getAlerts: () => jsonFetch('/api/config/alerts', { headers: apiHeaders() }),
+      setAlerts: (body) => jsonFetch('/api/config/alerts', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+      getAudit: (limit) => jsonFetch(`/api/audit?limit=${limit || 50}`, { headers: apiHeaders() }),
+      createTicket: (body) => jsonFetch('/api/integrations/ticket', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+      setSchedule: (body) => jsonFetch('/api/me/schedule', { method: 'PUT', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+      createPr: (body) => jsonFetch('/api/create-pr', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+      compareRepos: (repos) => jsonFetch('/api/compare-repos', { method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ repos }) }),
+      getAnomalies: () => jsonFetch('/api/anomalies', { headers: apiHeaders() }),
     };
 
     // ─── Helpers ─────────────────────────────────────────────────
@@ -269,6 +286,8 @@
       { key: 'branches', label: 'Branches', icon: '🌿' },
       { key: 'history', label: 'History', icon: '📜' },
       { key: 'trends', label: 'Trends', icon: '📈' },
+      { key: 'metrics', label: 'Metrics', icon: '📐' },
+      { key: 'compare', label: 'Compare', icon: '⚖️' },
     ];
 
     // ─── Outside-click hook ──────────────────────────────────────
@@ -283,30 +302,42 @@
     // ─── Small Components ────────────────────────────────────────
     function SevBadge({ severity }) { return <span className={`sev mono ${SEV_MAP[severity] || 'sev-medium'}`}>{(severity || 'unknown').toUpperCase()}</span>; }
     function LabelBadge({ label }) { const c = LABEL_COLORS[label] || '#8b949e'; return <span className="label-badge" style={{ color: c, border: `1px solid ${c}50` }}>{label}</span>; }
-    function Toast({ message, onClose }) { useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, []); return <div className="toast">{message}</div>; }
+    function Toast({ message, onClose }) { useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, []); return <div className="toast" role="status" aria-live="polite">{message}</div>; }
 
     // ─── Login Screen ────────────────────────────────────────────
     function LoginScreen({ onLogin }) {
       const [password, setPassword] = useState('');
+      const [username, setUsername] = useState('');
+      const [needUser, setNeedUser] = useState(false);
       const [error, setError] = useState('');
       const [busy, setBusy] = useState(false);
+      useEffect(() => {
+        fetch('/api/auth').then(r => r.json()).then(d => setNeedUser(!!d.hasUsers)).catch(() => {});
+      }, []);
       const handleSubmit = async (e) => {
         e.preventDefault(); setBusy(true); setError('');
         try {
-          const res = await api.login(password);
-          if (res.status === 'ok') { setAuthToken(password); onLogin(); }
-          else setError(res.message || 'Invalid password');
+          const body = needUser && username.trim() ? { username: username.trim(), password } : { password };
+          const res = await api.login(body);
+          if (res.status === 'ok') {
+            const token = res.token || password;
+            setAuthToken(token);
+            onLogin();
+          } else setError(res.message || 'Invalid credentials');
         } catch { setError('Connection failed'); } finally { setBusy(false); }
       };
       return (
-        <div className="login-overlay">
-          <div className="login-box">
-            <div className="logo" style={{ margin: '0 auto 20px', width: 56, height: 56, fontSize: 28, borderRadius: 14 }}>📊</div>
-            <h2>GitHub Digest</h2>
-            <div className="login-sub">Enter your dashboard password to continue.</div>
+        <div className="login-overlay" role="presentation">
+          <div className="login-box" role="form" aria-labelledby="login-title">
+            <div className="logo" style={{ margin: '0 auto 20px', width: 56, height: 56, fontSize: 28, borderRadius: 14 }} aria-hidden="true">📊</div>
+            <h2 id="login-title">GitHub Digest</h2>
+            <div className="login-sub">{needUser ? 'Sign in with your username and password.' : 'Enter your dashboard password to continue.'}</div>
             <form onSubmit={handleSubmit}>
-              <input type="password" className="login-input" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
-              {error && <div className="login-error">{error}</div>}
+              {needUser && (
+                <input type="text" className="login-input" placeholder="Username" autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} aria-invalid={!!error} />
+              )}
+              <input type="password" className="login-input" placeholder="Password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} autoFocus={!needUser} aria-invalid={!!error} aria-describedby={error ? 'login-err' : undefined} />
+              {error && <div id="login-err" className="login-error" role="alert">{error}</div>}
               <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={busy}>{busy ? 'Verifying...' : 'Sign In'}</button>
             </form>
           </div>
@@ -346,6 +377,91 @@
     }
 
     // ─── Trends Panel ────────────────────────────────────────────
+    function MetricsPanel() {
+      const [m, setM] = useState(null);
+      const [anom, setAnom] = useState(null);
+      const [busy, setBusy] = useState(true);
+      useEffect(() => {
+        Promise.all([api.getEngineeringMetrics(), api.getAnomalies()]).then(([r1, r2]) => {
+          if (r1.status === 'ok') setM(r1.data);
+          if (r2.status === 'ok') setAnom(r2.data);
+          setBusy(false);
+        }).catch(() => setBusy(false));
+      }, []);
+      if (busy) return <div className="loading-wrap"><div className="spinner" /><div className="mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>Loading metrics...</div></div>;
+      if (!m) return <div className="empty"><div className="empty-icon">📐</div><h3>No metrics yet</h3><p>Run a scan to compute PR age and workload signals (DORA-lite snapshot).</p></div>;
+      return (
+        <div>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 20, lineHeight: 1.5 }}>Snapshot from the latest scan — not a full deployment-frequency history. Use trends for change over time.</p>
+          {anom && anom.alerts && anom.alerts.length > 0 && (
+            <div style={{ marginBottom: 20, padding: 12, borderRadius: 8, border: '1px solid var(--yellow)', background: 'rgba(240,192,32,0.08)' }} role="region" aria-label="Anomaly signals">
+              <div className="actions-title mono" style={{ marginBottom: 8 }}>Anomaly signals</div>
+              {anom.alerts.map((a, i) => <div key={i} style={{ fontSize: 13, marginBottom: 6 }}><SevBadge severity={a.severity === 'warning' ? 'high' : 'medium'} /> {a.message}</div>)}
+            </div>
+          )}
+          {anom && anom.spikeEvaluation && anom.spikeEvaluation.multiplier != null && (
+            <p className="mono" style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 12 }}>Spike rule: {anom.spikeEvaluation.multiplier}× vs last {anom.spikeEvaluation.lookbackScans || '?'} scans · baseline {anom.spikeEvaluation.baseline != null ? anom.spikeEvaluation.baseline.toFixed(1) : '—'} · current {anom.spikeEvaluation.current ?? '—'}</p>
+          )}
+          <div className="trend-grid">
+            <div className="trend-stat"><div className="val mono">{m.openPRCount}</div><div className="lbl">Open PRs</div></div>
+            <div className="trend-stat"><div className="val mono">{m.prAgeDaysP50}d</div><div className="lbl">PR age p50</div></div>
+            <div className="trend-stat"><div className="val mono">{m.prAgeDaysP90}d</div><div className="lbl">PR age p90</div></div>
+            <div className="trend-stat"><div className="val mono">{m.failedBuildCount}</div><div className="lbl">Failed builds</div></div>
+            <div className="trend-stat"><div className="val mono">{m.securityAlertCount}</div><div className="lbl">Security alerts</div></div>
+            <div className="trend-stat"><div className="val mono">{m.staleBranchCount}</div><div className="lbl">Stale branches</div></div>
+          </div>
+        </div>
+      );
+    }
+
+    function ComparePanel({ onToast }) {
+      const [input, setInput] = useState('');
+      const [result, setResult] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const run = () => {
+        const repos = input.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+        if (!repos.length) { onToast('Enter at least one owner/repo'); return; }
+        setBusy(true);
+        api.compareRepos(repos).then(r => {
+          if (r.status === 'ok') setResult(r.data);
+          else onToast('❌ ' + (r.message || 'Compare failed'));
+          setBusy(false);
+        }).catch(() => { setBusy(false); onToast('❌ Compare failed'); });
+      };
+      const catKeys = result?.repos?.[0]?.breakdown ? Object.keys(result.repos[0].breakdown) : [];
+      return (
+        <div>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 16, lineHeight: 1.5 }}>Side-by-side counts from the latest scan. Enter full repo slugs (<code>acme/webapp</code>), comma or newline separated.</p>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input className="config-input" style={{ flex: 1, minWidth: 220 }} placeholder="org/frontend, org/api" value={input} onChange={e => setInput(e.target.value)} aria-label="Repositories to compare" />
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={run}>{busy ? '…' : 'Compare'}</button>
+          </div>
+          {result && result.repos && result.repos.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }} className="mono">
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>Repo</th>
+                    <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid var(--border)' }}>Total</th>
+                    {catKeys.map(k => <th key={k} style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid var(--border)' }}>{k}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.repos.map(row => (
+                    <tr key={row.repo}>
+                      <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{row.repo}</td>
+                      <td style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid var(--border)' }}>{row.totalItems}</td>
+                      {catKeys.map(k => <td key={k} style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid var(--border)' }}>{row.breakdown[k] ?? 0}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     function TrendsPanel() {
       const [trends, setTrends] = useState(null);
       const [days, setDays] = useState(30);
@@ -381,23 +497,68 @@
     }
 
     // ─── Fix Suggestion Modal ────────────────────────────────────
-    function FixModal({ item, category, onClose }) {
+    function FixModal({ item, category, isAdmin, onClose, onToast }) {
       const [suggestion, setSuggestion] = useState(null);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState(null);
+      const [ticketBusy, setTicketBusy] = useState(false);
+      const [prBusy, setPrBusy] = useState(false);
+      const [ticketSystem, setTicketSystem] = useState('linear');
       useEffect(() => {
         api.suggestFix(item, category).then(r => {
           if (r.status === 'ok') setSuggestion(r.data);
           else setError(r.message || 'Failed to get suggestion');
           setLoading(false);
         }).catch(e => { setError(e.message); setLoading(false); });
-      }, []);
+      }, [item, category]);
+      const ticketTitle = String(item?.title || item?.workflow || item?.branch || `GitHub digest: ${category}`).slice(0, 480);
+      const ticketDesc = suggestion
+        ? `${suggestion.summary}\n\n${(suggestion.steps || []).join('\n')}`
+        : (item ? JSON.stringify({ repo: item.repo, category, ...item }, null, 2) : '');
+      const handleTicket = async () => {
+        setTicketBusy(true);
+        try {
+          const res = await api.createTicket({ system: ticketSystem, title: ticketTitle, description: ticketDesc.slice(0, 8000) });
+          if (res.status === 'ok') onToast('✅ Ticket created');
+          else onToast('❌ ' + (res.message || 'Ticket failed'));
+        } catch (e) { onToast('❌ ' + e.message); }
+        finally { setTicketBusy(false); }
+      };
+      const handleCreatePr = async () => {
+        const parts = String(item?.repo || '').split('/').filter(Boolean);
+        if (parts.length < 2 || !suggestion?.suggestedBranch) return;
+        const owner = parts[0];
+        const repo = parts.slice(1).join('/');
+        let branch = String(suggestion.suggestedBranch).replace(/[^a-zA-Z0-9/_-]/g, '-').replace(/^-+|-+$/g, '').slice(0, 200);
+        if (!branch) branch = 'fix/digest';
+        setPrBusy(true);
+        try {
+          const payload = {
+            owner,
+            repo,
+            title: ('Fix: ' + ticketTitle).slice(0, 500),
+            body: ticketDesc.slice(0, 48000),
+            branch,
+            baseBranch: 'main',
+          };
+          if (Array.isArray(suggestion.fileChanges) && suggestion.fileChanges.length) {
+            payload.files = suggestion.fileChanges.map((f) => ({
+              path: String(f.path || '').trim(),
+              content: typeof f.content === 'string' ? f.content : '',
+            })).filter((f) => f.path && f.path.length <= 500);
+          }
+          const res = await api.createPr(payload);
+          if (res.status === 'ok') { onToast('✅ PR #' + res.data.prNumber); if (res.data.prUrl) window.open(res.data.prUrl, '_blank'); }
+          else onToast('❌ ' + (res.message || 'PR failed'));
+        } catch (e) { onToast('❌ ' + e.message); }
+        finally { setPrBusy(false); }
+      };
       return (
-        <div className="fix-modal" onClick={onClose}>
-          <div className="fix-modal-body" onClick={e => e.stopPropagation()}>
+        <div className="fix-modal" onClick={onClose} role="presentation">
+          <div className="fix-modal-body" role="dialog" aria-modal="true" aria-labelledby="fix-modal-title" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16 }}>🔧 AI Fix Suggestion</h3>
-              <button className="btn btn-sm" onClick={onClose}>✕</button>
+              <h3 id="fix-modal-title" style={{ fontSize: 16 }}>🔧 AI Fix Suggestion</h3>
+              <button type="button" className="btn btn-sm" onClick={onClose} aria-label="Close">✕</button>
             </div>
             {loading ? <div className="loading-wrap" style={{ minHeight: 100 }}><div className="spinner" /><div className="mono" style={{ fontSize: 12, color: 'var(--text-dim)' }}>Analyzing...</div></div>
             : error ? <div style={{ color: 'var(--red)', fontSize: 13 }}>{error}</div>
@@ -413,6 +574,28 @@
                 {suggestion.steps.map((step, i) => (
                   <div className="fix-step" key={i}><span className="action-num mono">{i + 1}</span><span style={{ color: 'var(--text-secondary)' }}>{step}</span></div>
                 ))}
+                {isAdmin && suggestion.canAutoPR && suggestion.suggestedBranch && item?.repo && item.repo.includes('/') && (
+                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                    <div className="actions-title mono">Auto-fix PR</div>
+                    <p style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 8 }}>{Array.isArray(suggestion.fileChanges) && suggestion.fileChanges.length
+                      ? <>Creates branch <code>{suggestion.suggestedBranch}</code> from <code>main</code> with <strong>{suggestion.fileChanges.length}</strong> committed file update(s) and opens a PR. Adjust default branch in GitHub if needed.</>
+                      : <>Creates branch <code>{suggestion.suggestedBranch}</code> from <code>main</code> and opens a PR with this plan as the description only. Adjust default branch in GitHub if needed.</>}</p>
+                    <button type="button" className="btn btn-sm btn-primary" disabled={prBusy} onClick={handleCreatePr}>{prBusy ? '…' : 'Create PR'}</button>
+                  </div>
+                )}
+                {isAdmin && (
+                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                    <div className="actions-title mono">Create ticket</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                      <select className="config-select" value={ticketSystem} onChange={e => setTicketSystem(e.target.value)} aria-label="Ticketing system">
+                        <option value="linear">Linear</option>
+                        <option value="jira">Jira</option>
+                      </select>
+                      <button type="button" className="btn btn-sm btn-primary" disabled={ticketBusy} onClick={handleTicket}>{ticketBusy ? '…' : 'Create ticket'}</button>
+                    </div>
+                    <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>Requires API keys in server env (see .env.example).</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -421,13 +604,34 @@
     }
 
     // ─── Settings Popover ────────────────────────────────────────
-    function SettingsPopover({ config, scanRules, notifications, aiConfig, plugins, onToggle, onRuleChange, onAiChange, onClose, onLogout, authEnabled }) {
+    function SettingsPopover({ config, scanRules, notifications, aiConfig, plugins, onToggle, onRuleChange, onAiChange, onClose, onLogout, authEnabled, isAdmin, accountSub, initialSchedule, onToast, onScheduleUpdated }) {
       const ref = useRef();
       useOutsideClick(ref, onClose);
       const all = config?.all || [];
       const enabled = new Set(config?.enabled || []);
       const [localRules, setLocalRules] = useState(scanRules || {});
       const ruleTimer = useRef(null);
+      const [alertRules, setAlertRules] = useState(null);
+      const [alertSaving, setAlertSaving] = useState(false);
+      const [auditOpen, setAuditOpen] = useState(false);
+      const [auditRows, setAuditRows] = useState([]);
+      const [auditBusy, setAuditBusy] = useState(false);
+      const canEditSchedule = accountSub && accountSub !== 'env' && accountSub !== 'anon';
+      const [digestFrequency, setDigestFrequency] = useState(initialSchedule?.digestFrequency || 'daily');
+      const [digestHourUtc, setDigestHourUtc] = useState(initialSchedule?.digestHourUtc ?? 7);
+      const [scheduleBusy, setScheduleBusy] = useState(false);
+
+      useEffect(() => {
+        if (initialSchedule) {
+          setDigestFrequency(initialSchedule.digestFrequency || 'daily');
+          setDigestHourUtc(initialSchedule.digestHourUtc ?? 7);
+        }
+      }, [initialSchedule?.digestFrequency, initialSchedule?.digestHourUtc]);
+
+      useEffect(() => {
+        if (!isAdmin) return;
+        api.getAlerts().then(r => { if (r.status === 'ok') setAlertRules(r.data); });
+      }, [isAdmin]);
 
       const handleRuleChange = (key, val) => {
         const updated = { ...localRules, [key]: val };
@@ -436,13 +640,63 @@
         ruleTimer.current = setTimeout(() => onRuleChange(updated), 500);
       };
 
+      const saveAlertRules = async () => {
+        if (!alertRules) return;
+        setAlertSaving(true);
+        try {
+          const parseThreshold = (v) => {
+            if (v === '' || v == null) return null;
+            const n = parseInt(String(v), 10);
+            return Number.isFinite(n) && n >= 0 ? n : null;
+          };
+          const parseMult = (v) => {
+            if (v === '' || v == null) return null;
+            const n = parseFloat(String(v));
+            return Number.isFinite(n) && n > 1 ? Math.min(50, n) : null;
+          };
+          const lb = parseInt(String(alertRules.spikeLookback ?? 8), 10);
+          const body = {
+            securityCountGt: parseThreshold(alertRules.securityCountGt),
+            failedBuildsGt: parseThreshold(alertRules.failedBuildsGt),
+            pageOnCriticalSecurity: !!alertRules.pageOnCriticalSecurity,
+            slackMention: String(alertRules.slackMention || ''),
+            totalItemsSpikeMultiplier: parseMult(alertRules.totalItemsSpikeMultiplier),
+            spikeLookback: Number.isFinite(lb) && lb >= 2 && lb <= 50 ? lb : 8,
+          };
+          const res = await api.setAlerts(body);
+          if (res.status === 'ok') { setAlertRules(res.data); onToast('✅ Alert rules saved'); }
+          else onToast('❌ ' + (res.message || 'Save failed'));
+        } catch (e) { onToast('❌ ' + e.message); }
+        finally { setAlertSaving(false); }
+      };
+
+      const loadAudit = async () => {
+        setAuditBusy(true);
+        try {
+          const res = await api.getAudit(80);
+          if (res.status === 'ok') { setAuditRows(res.data || []); setAuditOpen(true); }
+          else onToast('❌ ' + (res.message || 'Audit unavailable'));
+        } catch (e) { onToast('❌ ' + e.message); }
+        finally { setAuditBusy(false); }
+      };
+
+      const saveSchedule = async () => {
+        setScheduleBusy(true);
+        try {
+          const res = await api.setSchedule({ digestFrequency, digestHourUtc: parseInt(String(digestHourUtc), 10) || 0 });
+          if (res.status === 'ok') { onToast('✅ Schedule saved'); onScheduleUpdated && onScheduleUpdated(); }
+          else onToast('❌ ' + (res.message || 'Failed'));
+        } catch (e) { onToast('❌ ' + e.message); }
+        finally { setScheduleBusy(false); }
+      };
+
       return (
-        <div className="popover" ref={ref} style={{ minWidth: 300 }}>
+        <div className="popover" ref={ref} style={{ minWidth: 300, maxHeight: '85vh', overflowY: 'auto' }}>
           <div className="popover-title">Scanners</div>
           {all.map(name => (
             <div className="toggle-row" key={name}>
               <label><span>{SCANNER_ICONS[name]}</span><span>{name}</span></label>
-              <div className={`toggle-switch ${enabled.has(name) ? 'on' : ''}`} onClick={() => onToggle(name, !enabled.has(name))} />
+              <div className={`toggle-switch ${enabled.has(name) ? 'on' : ''}`} role="switch" aria-checked={enabled.has(name)} tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(name, !enabled.has(name)); } }} onClick={() => onToggle(name, !enabled.has(name))} />
             </div>
           ))}
 
@@ -451,6 +705,15 @@
           <div className="config-field"><label>Build window (hours)</label><input type="number" className="config-input" value={localRules.buildWindowHours || 24} onChange={e => handleRuleChange('buildWindowHours', parseInt(e.target.value) || 24)} /></div>
           <div className="config-field"><label>Min severity</label><select className="config-select" value={localRules.severityThreshold || 'low'} onChange={e => handleRuleChange('severityThreshold', e.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
           <div className="config-field"><label>Max items/scanner</label><input type="number" className="config-input" value={localRules.maxItemsPerScanner || 100} onChange={e => handleRuleChange('maxItemsPerScanner', parseInt(e.target.value) || 100)} /></div>
+
+          {canEditSchedule && (
+            <div style={{ marginTop: 16 }}>
+              <div className="popover-title">Digest schedule</div>
+              <div className="config-field"><label>Frequency</label><select className="config-select" value={digestFrequency} onChange={e => setDigestFrequency(e.target.value)}><option value="off">Off</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
+              <div className="config-field"><label>Hour (UTC)</label><input type="number" min={0} max={23} className="config-input" value={digestHourUtc} onChange={e => setDigestHourUtc(parseInt(e.target.value, 10) || 0)} /></div>
+              <button type="button" className="btn btn-sm btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={scheduleBusy} onClick={saveSchedule}>{scheduleBusy ? 'Saving…' : 'Save schedule'}</button>
+            </div>
+          )}
 
           {aiConfig && (
             <div style={{ marginTop: 16 }}>
@@ -476,11 +739,38 @@
               <div className="popover-title">Notifications</div>
               <div className="toggle-row"><label>Slack</label><span style={{ fontSize: 11, color: notifications.slack ? 'var(--green)' : 'var(--text-dim)' }}>{notifications.slack ? '✓ Connected' : 'Not configured'}</span></div>
               <div className="toggle-row"><label>Discord</label><span style={{ fontSize: 11, color: notifications.discord ? 'var(--green)' : 'var(--text-dim)' }}>{notifications.discord ? '✓ Connected' : 'Not configured'}</span></div>
+              <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>PagerDuty pages when alert rules fire and <code>PAGERDUTY_ROUTING_KEY</code> is set.</p>
+            </div>
+          )}
+
+          {isAdmin && alertRules && (
+            <div style={{ marginTop: 16 }}>
+              <div className="popover-title">Alert rules</div>
+              <div className="config-field"><label>Page if security count &gt;</label><input type="number" className="config-input" placeholder="(disabled)" value={alertRules.securityCountGt ?? ''} onChange={e => setAlertRules(a => ({ ...a, securityCountGt: e.target.value === '' ? null : e.target.value }))} /></div>
+              <div className="config-field"><label>Page if failed builds &gt;</label><input type="number" className="config-input" placeholder="(disabled)" value={alertRules.failedBuildsGt ?? ''} onChange={e => setAlertRules(a => ({ ...a, failedBuildsGt: e.target.value === '' ? null : e.target.value }))} /></div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 8 }}><input type="checkbox" checked={!!alertRules.pageOnCriticalSecurity} onChange={e => setAlertRules(a => ({ ...a, pageOnCriticalSecurity: e.target.checked }))} /> Page on critical security</label>
+              <div className="config-field" style={{ marginTop: 8 }}><label>Slack mention (optional)</label><input type="text" className="config-input" placeholder="&lt;@U123&gt;" value={alertRules.slackMention || ''} onChange={e => setAlertRules(a => ({ ...a, slackMention: e.target.value }))} /></div>
+              <div className="config-field"><label>Total-items spike × baseline</label><input type="number" step="0.1" className="config-input" placeholder="(off)" value={alertRules.totalItemsSpikeMultiplier ?? ''} onChange={e => setAlertRules(a => ({ ...a, totalItemsSpikeMultiplier: e.target.value === '' ? null : e.target.value }))} /></div>
+              <div className="config-field"><label>Spike lookback scans</label><input type="number" className="config-input" min={2} max={50} value={alertRules.spikeLookback ?? 8} onChange={e => setAlertRules(a => ({ ...a, spikeLookback: parseInt(e.target.value, 10) || 8 }))} /></div>
+              <button type="button" className="btn btn-sm btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={alertSaving} onClick={saveAlertRules}>{alertSaving ? 'Saving…' : 'Save alert rules'}</button>
+            </div>
+          )}
+
+          {isAdmin && (
+            <div style={{ marginTop: 16 }}>
+              <div className="popover-title">Audit log</div>
+              <button type="button" className="btn btn-sm" style={{ width: '100%' }} disabled={auditBusy} onClick={loadAudit}>{auditBusy ? 'Loading…' : (auditOpen ? 'Refresh audit log' : 'Load audit log')}</button>
+              {auditOpen && auditRows.length === 0 && <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>No entries yet.</p>}
+              {auditOpen && auditRows.length > 0 && (
+                <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', maxHeight: 160, overflowY: 'auto', fontSize: 11 }}>{auditRows.slice(0, 40).map((row, i) => (
+                  <li key={i} style={{ borderBottom: '1px solid var(--border)', padding: '6px 0' }}><span className="mono">{row.ts || row.timestamp || ''}</span> — {row.action}{row.actor ? ` · ${row.actor}` : ''}</li>
+                ))}</ul>
+              )}
             </div>
           )}
 
           {authEnabled && (
-            <button className="btn" style={{ width: '100%', marginTop: 16, justifyContent: 'center', color: 'var(--red)' }} onClick={onLogout}>Sign Out</button>
+            <button type="button" className="btn" style={{ width: '100%', marginTop: 16, justifyContent: 'center', color: 'var(--red)' }} onClick={onLogout}>Sign Out</button>
           )}
         </div>
       );
@@ -548,7 +838,7 @@
       return (<div>{history.map((entry, idx) => (<div className="row" key={entry.id} style={{ animationDelay: `${idx * 0.03}s`, cursor: 'pointer' }} onClick={() => onLoadScan(entry.id)}><div className="num-badge mono" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 10, width: 32, height: 32 }}>#{history.length - idx}</div><div style={{ flex: 1, minWidth: 0 }}><div className="row-title">{new Date(entry.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div><div className="row-sub"><span>{entry.reposScanned} repos</span><span className="sep">·</span><span>{entry.totalItems} items</span><span className="sep">·</span><span>{entry.elapsed}</span></div></div><span className="btn btn-sm">Load</span></div>))}</div>);
     }
 
-    const PANELS = { overview: OverviewPanel, builds: BuildsPanel, prs: PRsPanel, security: SecurityPanel, tokens: TokensPanel, issues: IssuesPanel, branches: BranchesPanel, history: HistoryPanel, trends: TrendsPanel };
+    const PANELS = { overview: OverviewPanel, builds: BuildsPanel, prs: PRsPanel, security: SecurityPanel, tokens: TokensPanel, issues: IssuesPanel, branches: BranchesPanel, history: HistoryPanel, trends: TrendsPanel, metrics: MetricsPanel };
 
     // ─── Main App ────────────────────────────────────────────────
     function App() {
@@ -576,6 +866,8 @@
       const [fixTarget, setFixTarget] = useState(null);
       const [installPrompt, setInstallPrompt] = useState(null);
       const [theme, setTheme] = useState(getTheme());
+      const [userProfile, setUserProfile] = useState(null);
+      const [scanLiveLine, setScanLiveLine] = useState('');
       const exportRef = useRef();
 
       useOutsideClick(exportRef, () => setExportOpen(false));
@@ -602,6 +894,7 @@
         api.getAiConfig().then(r => { if (r.status === 'ok') setAiConfig(r.data); });
         api.getPlugins().then(r => { if (r.status === 'ok') setPlugins(r.data.plugins || []); });
         api.getOrgs().then(r => { if (r.status === 'ok') setOrgs(r.data.orgs || []); });
+        api.getMe().then(r => { if (r.status === 'ok') setUserProfile(r.data); });
       }, [authenticated]);
 
       useEffect(() => {
@@ -611,13 +904,49 @@
       }, []);
 
       const handleScan = useCallback(async () => {
-        setScanning(true); setViewingHistorical(false);
+        setScanning(true); setViewingHistorical(false); setScanLiveLine('Starting…');
+        let ws = null;
+        try {
+          const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wurl = `${proto}//${window.location.host}/ws/scan`;
+          ws = new WebSocket(wurl);
+          ws.onopen = () => {
+            try {
+              if (typeof authToken === 'string' && authToken) {
+                ws.send(JSON.stringify({ type: 'auth', token: authToken }));
+              }
+            } catch { /* ignore */ }
+          };
+          ws.onmessage = (ev) => {
+            try {
+              const m = JSON.parse(ev.data);
+              if (m.phase === 'connected') setScanLiveLine('Live updates on');
+              else if (m.phase === 'fetch_repos_start') setScanLiveLine('Fetching repos…');
+              else if (m.phase === 'fetch_repos_done') setScanLiveLine(`Repos: ${m.repoCount ?? '?'}`);
+              else if (m.phase === 'scanner_start') setScanLiveLine(`Scanner: ${m.key}…`);
+              else if (m.phase === 'scanner_done') setScanLiveLine(m.skipped ? `${m.key} (off)` : `${m.key}: ${m.count}`);
+              else if (m.phase === 'plugin_scanner_start') setScanLiveLine(`Plugin: ${m.key}…`);
+              else if (m.phase === 'plugin_scanner_done') setScanLiveLine(`Plugin ${m.key}: ${m.count}${m.error ? ' err' : ''}`);
+              else if (m.phase === 'scan_complete') setScanLiveLine(`Done · ${m.totalItems} items · ${m.elapsed || ''}`);
+              else if (m.phase === 'scan_error') setScanLiveLine('Error: ' + (m.message || ''));
+            } catch { /* ignore */ }
+          };
+          ws.onerror = () => { /* ignore */ };
+          ws.onclose = (ev) => {
+            if (ev.code === 4401) setScanLiveLine('WebSocket auth failed — sign in again');
+          };
+        } catch { setScanLiveLine(''); }
+
         try {
           const res = await api.runScan();
-          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setToast('✅ Scan complete!'); setSummaryLoading(true); setSummary(null); api.getSummary().then(s => { if (s.status === 'ok') setSummary(s.data); }).finally(() => setSummaryLoading(false)); api.getRateLimit().then(r => { if (r.status === 'ok') setRateLimit(r.data); }); }
+          if (res.status === 'ok') { setData(res.data); setDiff(res.diff || null); setToast('✅ Scan complete!'); setSummaryLoading(true); setSummary(null); api.getSummary().then(s => { if (s.status === 'ok') setSummary(s.data); }).finally(() => setSummaryLoading(false)); api.getRateLimit().then(r => { if (r.status === 'ok') setRateLimit(r.data); }); api.getOrgs().then(r => { if (r.status === 'ok') setOrgs(r.data.orgs || []); }); }
           else setToast('❌ ' + (res.message || 'Scan failed'));
-        } catch (err) { setToast('❌ ' + err.message); } finally { setScanning(false); }
-      }, []);
+        } catch (err) { setToast('❌ ' + err.message); } finally {
+          try { ws && ws.close(); } catch { /* ignore */ }
+          setScanning(false);
+          setTimeout(() => setScanLiveLine(''), 2500);
+        }
+      }, [authToken]);
 
       const handleDigest = useCallback(async () => {
         setScanning(true); setViewingHistorical(false);
@@ -711,6 +1040,7 @@
                 </select>
               )}
               <RateLimitBar info={rateLimit} />
+              {scanLiveLine ? <div className="mono" role="status" aria-live="polite" style={{ fontSize: 11, color: 'var(--accent)', maxWidth: 260, textAlign: 'right', lineHeight: 1.3 }}>{scanLiveLine}</div> : null}
               <div className="status-row">
                 <div className="status-dot" style={{ background: viewingHistorical ? 'var(--yellow)' : 'var(--green)', boxShadow: viewingHistorical ? '0 0 8px rgba(240,192,32,0.4)' : '0 0 8px rgba(48,161,78,0.4)' }} />
                 <span className="mono">{viewingHistorical ? 'Historical' : 'Last: ' + new Date(data.meta.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -718,7 +1048,7 @@
               <button className="btn btn-icon" onClick={toggleTheme} title="Toggle theme">{theme === 'dark' ? '☀️' : '🌙'}</button>
               <div style={{ position: 'relative' }}>
                 <button className="btn btn-icon" onClick={() => { setSettingsOpen(!settingsOpen); setExportOpen(false); }} title="Settings">⚙️</button>
-                {settingsOpen && <SettingsPopover config={scannerConfig} scanRules={scanRules} notifications={notifications} aiConfig={aiConfig} plugins={plugins} onToggle={handleToggleScanner} onRuleChange={handleRuleChange} onAiChange={handleAiChange} onClose={() => setSettingsOpen(false)} onLogout={handleLogout} authEnabled={authRequired} />}
+                {settingsOpen && <SettingsPopover config={scannerConfig} scanRules={scanRules} notifications={notifications} aiConfig={aiConfig} plugins={plugins} onToggle={handleToggleScanner} onRuleChange={handleRuleChange} onAiChange={handleAiChange} onClose={() => setSettingsOpen(false)} onLogout={handleLogout} authEnabled={authRequired} isAdmin={userProfile?.role === 'admin'} accountSub={userProfile?.sub} initialSchedule={userProfile?.schedule} onToast={setToast} onScheduleUpdated={() => api.getMe().then(r => { if (r.status === 'ok') setUserProfile(r.data); })} />}
               </div>
               <div style={{ position: 'relative' }} ref={exportRef}>
                 <button className="btn" onClick={() => { setExportOpen(!exportOpen); setSettingsOpen(false); }}>📥 Export</button>
@@ -730,6 +1060,11 @@
           </div>
 
           {installPrompt && (<div className="install-banner"><span>📱 Install GitHub Digest as an app</span><button className="btn btn-sm btn-primary" onClick={handleInstall}>Install</button></div>)}
+          {userProfile?.teamView && (userProfile?.visibleOrgs || []).length > 0 && (
+            <div className="history-banner" style={{ background: 'rgba(88,166,255,0.1)', borderColor: 'var(--accent)' }} role="note">
+              <span>👥 Team view — orgs: <strong className="mono">{(userProfile.visibleOrgs || []).join(', ')}</strong>. Admins set <code className="mono">preferences.visibleOrgs</code> per user.</span>
+            </div>
+          )}
           {viewingHistorical && (<div className="history-banner"><span>📜 Viewing historical scan from {new Date(data.meta.lastRun).toLocaleString()}</span><button className="btn btn-sm" onClick={handleBackToLatest}>Back to Latest</button></div>)}
 
           <div className="stat-grid">
@@ -746,22 +1081,23 @@
             })}
           </div>
 
-          <div className="tabs">
+          <div className="tabs" role="tablist" aria-label="Dashboard views">
             {TABS.map(tab => {
-              const count = tab.key !== 'overview' && tab.key !== 'history' ? data[tab.key]?.count : undefined;
+              const count = tab.key !== 'overview' && tab.key !== 'history' && tab.key !== 'trends' && tab.key !== 'metrics' && tab.key !== 'compare' ? data[tab.key]?.count : undefined;
               const d = diff && diff[tab.key];
-              return (<button key={tab.key} className={`tab${activeTab === tab.key ? ' active' : ''}`} onClick={() => setActiveTab(tab.key)}><span>{tab.icon}</span>{tab.label}{count !== undefined && <span className="badge mono">{count}</span>}{d && d.new > 0 && <span className="diff-badge diff-new">+{d.new}</span>}</button>);
+              return (<button key={tab.key} type="button" id={`tab-${tab.key}`} role="tab" aria-selected={activeTab === tab.key} aria-controls="dashboard-tabpanel" className={`tab${activeTab === tab.key ? ' active' : ''}`} onClick={() => setActiveTab(tab.key)}><span aria-hidden="true">{tab.icon}</span>{tab.label}{count !== undefined && <span className="badge mono">{count}</span>}{d && d.new > 0 && <span className="diff-badge diff-new">+{d.new}</span>}</button>);
             })}
           </div>
 
-          <div className="panel" key={activeTab}>
+          <div className="panel" key={activeTab} id="dashboard-tabpanel" role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'overview' ? <Panel data={filteredData} summary={summary} summaryLoading={summaryLoading} diff={diff} />
              : activeTab === 'history' ? <Panel onLoadScan={handleLoadHistorical} />
-             : activeTab === 'trends' ? <Panel />
+             : activeTab === 'trends' || activeTab === 'metrics' ? <Panel />
+             : activeTab === 'compare' ? <ComparePanel onToast={setToast} />
              : <Panel data={filteredData} insight={categoryInsights[activeTab]} onDeleteBranch={handleDeleteBranch} onFixClick={handleFixClick} />}
           </div>
 
-          {fixTarget && <FixModal item={fixTarget.item} category={fixTarget.category} onClose={() => setFixTarget(null)} />}
+          {fixTarget && <FixModal item={fixTarget.item} category={fixTarget.category} isAdmin={userProfile?.role === 'admin'} onClose={() => setFixTarget(null)} onToast={setToast} />}
           {toast && <Toast message={toast} onClose={() => setToast(null)} />}
         </div>
       );

@@ -1,6 +1,6 @@
 # GitHub Digest Agent — Roadmap
 
-## Current State (v2.0)
+## Current State (v3.2)
 
 - 6 parallel scanners: builds, PRs, security, tokens, issues, stale branches
 - Claude-powered email digests and dashboard summaries
@@ -40,13 +40,33 @@
 - [x] Production hardening (security headers, structured request logging)
 - [x] Bug fixes (duplicate notifications, scheduler cleanup)
 
-## Future (v3.1+)
+## v3.1 — Shipped (hardening & ops)
 
-- [ ] Real-time WebSocket updates for live scan progress
-- [ ] Team dashboards with role-based views
-- [ ] Scheduled reports with configurable frequency per user
-- [ ] Integration marketplace (Jira, Linear, PagerDuty)
-- [ ] Auto-fix PR creation with AI-generated code changes
-- [ ] Anomaly detection (alert on unusual spikes)
-- [ ] Multi-repo comparison views
-- [ ] Audit log for all dashboard actions
+- [x] Webhook HMAC verification, bcrypt passwords, JWT sessions, CSP security headers
+- [x] Atomic config/scan writes; branch delete updates latest scan without bogus history rows
+- [x] Vitest suite, CI with audit + coverage thresholds
+- [x] Prometheus-style `/metrics`, `/healthz`, `/readyz`, audit log API
+- [x] Shared concurrent GitHub fetches, trend response cache, clamped trend windows
+- [x] Zod validation on mutating APIs + per-IP write rate limits
+- [x] Multi-user login with admin/viewer RBAC
+- [x] DORA-lite engineering metrics API + dashboard Metrics tab
+- [x] Dashboard a11y (tabs, dialogs, live region) and consistent JSON error handling from fetch
+- [x] Alert rules (thresholds + PagerDuty hook), Linear/Jira ticket API, per-user digest schedule
+
+## v3.2 — Shipped
+
+- [x] Real-time WebSocket `/ws/scan` with live phase updates during scans (token query when auth is on)
+- [x] Team / scoped dashboards: `preferences.visibleOrgs` per user (viewer) filters scan, summary, metrics, exports, org list, compare, anomalies
+- [x] Auto-fix PR from fix modal when AI sets `canAutoPR` + `suggestedBranch` (`POST /api/create-pr`)
+- [x] Anomaly detection: rolling total-items spike rule in alert config + PagerDuty path; `GET /api/anomalies` for dashboard
+- [x] Multi-repo comparison: `POST /api/compare-repos` + **Compare** tab
+
+## v3.3 — Shipped
+
+- [x] WebSocket auth: first JSON message `{ "type": "auth", "token": "..." }` (no token in URL); optional `Sec-WebSocket-Protocol` with comma-separated values where a non-`digest-auth` segment is the JWT or shared password
+- [x] Historical trend series filtered for team views (`visibleOrgs`) with per-scope trend cache keys
+- [x] Auto-fix PR with committed file patches when the AI returns `fileChanges` / client sends `files` on `POST /api/create-pr`
+
+## Future (v3.4+)
+
+- [ ] Further WebSocket hardening (origin checks, narrower timeouts)

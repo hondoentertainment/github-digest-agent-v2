@@ -1,20 +1,8 @@
 import { octokit } from "../utils/github.js";
 import { getStaleBranchDays, getMaxItems } from "../utils/scanRules.js";
+import { mapConcurrent } from "../utils/mapConcurrent.js";
 
 const CONCURRENCY = 5;
-
-async function mapConcurrent(items, fn, limit) {
-  const results = [];
-  let i = 0;
-  async function worker() {
-    while (i < items.length) {
-      const idx = i++;
-      results[idx] = await fn(items[idx], idx);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
-  return results;
-}
 
 export async function scanStaleBranches(repos) {
   const staleDays = getStaleBranchDays();

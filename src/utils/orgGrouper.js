@@ -135,3 +135,90 @@ export function getOrgSummary(scanResult) {
   rows.sort((a, b) => b.totalItems - a.totalItems || a.org.localeCompare(b.org, undefined, { sensitivity: "base" }));
   return rows;
 }
+
+/**
+ * @param {string} repo
+ * @param {string[]} orgAllowList trimmed owner names
+ */
+function repoMatchesAnyOrg(repo, orgAllowList) {
+  if (typeof repo !== "string" || !orgAllowList.length) return false;
+  const owner = ownerFromRepo(repo);
+  if (!owner) return false;
+  const lower = owner.toLowerCase();
+  return orgAllowList.some((o) => o && lower === String(o).trim().toLowerCase());
+}
+
+/**
+ * Filter scan to items belonging to any of the listed orgs/owners (empty list = no filtering).
+ * @param {object} scanResult
+ * @param {string[] | null | undefined} orgNames
+ * @returns {object}
+ */
+export function filterScanByOrgAllowList(scanResult, orgNames) {
+  if (!orgNames || !Array.isArray(orgNames) || orgNames.length === 0) {
+    return scanResult;
+  }
+  const allow = orgNames.map((o) => String(o).trim()).filter(Boolean);
+  if (!allow.length) return scanResult;
+  if (!scanResult || typeof scanResult !== "object") {
+    return emptyScanShell();
+  }
+
+  const keys = Object.keys(scanResult).filter((k) => k !== "meta" && scanResult[k] && Array.isArray(scanResult[k].items));
+  const out = { ...scanResult };
+  let totalItems = 0;
+  const uniqueRepos = new Set();
+
+  for (const key of keys) {
+    const cat = scanResult[key];
+    const items = Array.isArray(cat?.items) ? cat.items : [];
+    const filtered = items.filter((item) => repoMatchesAnyOrg(item?.repo, allow));
+    totalItems += filtered.length;
+    for (const it of filtered) {
+      if (it?.repo) uniqueRepos.add(it.repo);
+    }
+    out[key] = filterCategory(cat, filtered);
+  }
+
+  const prevMeta = scanResult.meta && typeof scanResult.meta === "object" ? scanResult.meta : {};
+  out.meta = {
+    ...prevMeta,
+    totalItems,
+    reposScanned: uniqueRepos.size,
+    teamFilter: allow,
+  };
+
+  return out;
+}
+
+/**
+ * Side-by-side counts per repo from latest scan (built-in categories + plugins).
+ * @param {object} scanResult
+ * @param {string[]} repoFullNames e.g. ["octokit/rest.js"]
+ * @returns {{ scannedAt?: string, repos: { repo: string, totalItems: number, breakdown: Record<string, number> }[] }}
+ */
+export function compareReposInScan(scanResult, repoFullNames) {
+  if (!scanResult || typeof scanResult !== "object") {
+    return { scannedAt: undefined, repos: [] };
+  }
+  const keys = Object.keys(scanResult).filter((k) => k !== "meta" && scanResult[k] && Array.isArray(scanResult[k].items));
+  const names = (repoFullNames || []).map((r) => String(r).trim()).filter(Boolean).slice(0, 25);
+
+  const repos = names.map((repo) => {
+    const want = repo.toLowerCase();
+    const breakdown = {};
+    let total = 0;
+    for (const key of keys) {
+      const items = scanResult[key]?.items || [];
+      const n = items.filter((i) => typeof i?.repo === "string" && i.repo.toLowerCase() === want).length;
+      breakdown[key] = n;
+      total += n;
+    }
+    return { repo, totalItems: total, breakdown };
+  });
+
+  return {
+    scannedAt: scanResult.meta?.lastRun,
+    repos,
+  };
+}

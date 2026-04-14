@@ -45,6 +45,14 @@ function parseBody(body) {
   if (body == null) {
     return {};
   }
+  if (Buffer.isBuffer(body)) {
+    try {
+      return JSON.parse(body.toString("utf8"));
+    } catch (err) {
+      console.error("parseWebhookEvent: invalid JSON buffer", err);
+      return {};
+    }
+  }
   if (typeof body === "string") {
     try {
       return JSON.parse(body);

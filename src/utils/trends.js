@@ -1,10 +1,22 @@
 import { getHistory, getScan } from "./storage.js";
+import { filterScanByOrgAllowList } from "./orgGrouper.js";
 
 const CATEGORY_KEYS = ["builds", "prs", "security", "tokens", "issues", "branches"];
 
+/**
+ * Clamp trend window to a safe range (default 1–365 days).
+ * @param {number|string|undefined} raw
+ * @returns {number}
+ */
+export function clampTrendDays(raw) {
+  const max = Math.min(3650, Math.max(1, parseInt(process.env.MAX_TREND_DAYS || "365", 10)));
+  const n = parseInt(String(raw ?? 30), 10);
+  if (!Number.isFinite(n) || n < 1) return Math.min(30, max);
+  return Math.min(n, max);
+}
+
 function cutoffMs(days) {
-  const n = Number(days);
-  const windowDays = Number.isFinite(n) && n >= 0 ? n : 30;
+  const windowDays = clampTrendDays(days);
   return Date.now() - windowDays * 24 * 60 * 60 * 1000;
 }
 
@@ -73,7 +85,10 @@ function trendFromTotals(totals) {
   return "stable";
 }
 
-function buildSeriesForWindow(days) {
+/**
+ * @param {string[] | null | undefined} orgNames — when non-empty, counts are for those orgs only
+ */
+function buildSeriesForWindow(days, orgNames) {
   const history = getHistory();
   const rows = latestScanPerDayInWindow(history, days);
 
@@ -88,9 +103,17 @@ function buildSeriesForWindow(days) {
     total: [],
   };
 
+  const scope =
+    orgNames && Array.isArray(orgNames) && orgNames.length
+      ? orgNames.map((o) => String(o).trim()).filter(Boolean)
+      : null;
+
   for (const { day, id } of rows) {
     labels.push(day);
-    const scan = getScan(id);
+    let scan = getScan(id);
+    if (scope?.length && scan) {
+      scan = filterScanByOrgAllowList(scan, scope);
+    }
     series.builds.push(countFor(scan, "builds"));
     series.prs.push(countFor(scan, "prs"));
     series.security.push(countFor(scan, "security"));
@@ -111,8 +134,9 @@ function buildSeriesForWindow(days) {
  *   summary: { avgTotal: number, trend: 'improving'|'worsening'|'stable', peakDate: string|null, peakTotal: number }
  * }}
  */
-export function getTrends(days = 30) {
-  const { labels, series } = buildSeriesForWindow(days);
+export function getTrends(days = 30, orgNames) {
+  const d = clampTrendDays(days);
+  const { labels, series } = buildSeriesForWindow(d, orgNames);
   const totals = series.total;
   const len = totals.length;
   const avgTotal = len === 0 ? 0 : totals.reduce((a, b) => a + b, 0) / len;
@@ -142,13 +166,14 @@ const VALID_CATEGORIES = new Set([...CATEGORY_KEYS, "total"]);
  * @param {string} category — builds | prs | security | tokens | issues | branches | total
  * @param {number} [days=30]
  */
-export function getCategoryTrend(category, days = 30) {
+export function getCategoryTrend(category, days = 30, orgNames) {
   const key = String(category ?? "").toLowerCase();
   if (!VALID_CATEGORIES.has(key)) {
     return { labels: [], values: [], change: 0, changePercent: 0 };
   }
 
-  const { labels, series } = buildSeriesForWindow(days);
+  const d = clampTrendDays(days);
+  const { labels, series } = buildSeriesForWindow(d, orgNames);
   const values = key === "total" ? series.total : series[key] ?? [];
 
   if (values.length === 0) {

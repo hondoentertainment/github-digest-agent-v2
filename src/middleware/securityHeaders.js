@@ -19,6 +19,18 @@ export function securityHeaders() {
     // Remove server fingerprint
     res.removeHeader("X-Powered-By");
 
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: https:",
+      "connect-src 'self' ws: wss:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+    ].join("; ");
+    res.setHeader("Content-Security-Policy", csp);
+
     next();
   };
 }

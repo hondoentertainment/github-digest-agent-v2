@@ -1,4 +1,7 @@
 import dotenv from "dotenv";
+import { evaluateAlertRules } from "../utils/alertRules.js";
+import { triggerPagerDuty } from "./integrations.js";
+
 dotenv.config();
 
 const SLACK_URL = process.env.SLACK_WEBHOOK_URL;
@@ -40,6 +43,20 @@ export async function sendNotifications(scanResult) {
       console.error("Discord notification failed:", err.message);
       results.discord = "failed";
     }
+  }
+
+  try {
+    const { triggered, reasons } = evaluateAlertRules(scanResult);
+    if (triggered && process.env.PAGERDUTY_ROUTING_KEY?.trim()) {
+      const sev = reasons.some((r) => r.includes("critical")) ? "critical" : "warning";
+      await triggerPagerDuty({
+        summary: `GitHub Digest: ${reasons.join("; ")}`,
+        source: "github-digest-agent",
+        severity: sev,
+      });
+    }
+  } catch (err) {
+    console.error("PagerDuty trigger failed:", err.message);
   }
 
   return results;

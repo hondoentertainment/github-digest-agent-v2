@@ -1,10 +1,13 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 import { fileURLToPath } from "url";
+import { atomicWriteJson } from "./atomicWrite.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const USERS_FILE = path.join(__dirname, "../../data/users.json");
+const BCRYPT_ROUNDS = 12;
 
 function defaultPreferences() {
   return {
@@ -12,6 +15,10 @@ function defaultPreferences() {
     emailDigest: true,
     slackNotify: false,
     theme: "dark",
+    digestFrequency: "daily",
+    digestHourUtc: 7,
+    /** @type {string[]} GitHub org/user names; empty = all orgs (team / scoped dashboard view) */
+    visibleOrgs: [],
   };
 }
 
@@ -57,19 +64,24 @@ function loadUsers() {
 function saveUsers(users) {
   try {
     ensureDataDir();
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
+    atomicWriteJson(USERS_FILE, users);
   } catch (err) {
     console.error("users: saveUsers failed:", err?.message ?? err);
     throw err;
   }
 }
 
-/**
- * @param {string} password
- * @returns {string}
- */
+export function hasUsers() {
+  return loadUsers().length > 0;
+}
+
+/** @deprecated Use verifyPassword / hashPasswordSecure */
 export function hashPassword(password) {
   return crypto.createHash("sha256").update(String(password)).digest("hex");
+}
+
+export async function hashPasswordSecure(password) {
+  return bcrypt.hash(String(password), BCRYPT_ROUNDS);
 }
 
 function usernameKey(username) {
@@ -93,7 +105,6 @@ export function listUsers() {
 }
 
 /**
- * Full user for internal use (includes passwordHash and githubToken when present).
  * @param {string} id
  * @returns {object | null}
  */
@@ -127,65 +138,51 @@ export function getUserByUsername(username) {
 
 /**
  * @param {{ username: string, password: string, role?: string, email?: string | null }} input
- * @returns {object}
+ * @returns {Promise<object>}
  */
-export function createUser({ username, password, role = "viewer", email = null }) {
-  try {
-    const uname = String(username ?? "").trim();
-    if (!uname) {
-      throw new Error("username is required");
-    }
-    if (password == null || String(password) === "") {
-      throw new Error("password is required");
-    }
-
-    const users = loadUsers();
-    if (users.some((u) => usernameKey(u.username) === usernameKey(uname))) {
-      throw new Error("Username already exists");
-    }
-
-    if (role !== "admin" && role !== "viewer") {
-      throw new Error('role must be "admin" or "viewer"');
-    }
-
-    const passwordHash = hashPassword(String(password));
-    const now = new Date().toISOString();
-    const user = {
-      id: crypto.randomUUID(),
-      username: uname,
-      passwordHash,
-      role,
-      githubToken: null,
-      email: email == null ? null : String(email),
-      preferences: defaultPreferences(),
-      createdAt: now,
-      lastLoginAt: null,
-    };
-
-    users.push(user);
-    saveUsers(users);
-    return sanitizeUser(user);
-  } catch (err) {
-    const msg = err?.message ?? "";
-    if (
-      msg === "Username already exists" ||
-      msg === "username is required" ||
-      msg === "password is required" ||
-      msg.startsWith('role must be "admin"')
-    ) {
-      throw err;
-    }
-    console.error("users: createUser failed:", msg);
-    throw err;
+export async function createUser({ username, password, role = "viewer", email = null }) {
+  const uname = String(username ?? "").trim();
+  if (!uname) {
+    throw new Error("username is required");
   }
+  if (password == null || String(password) === "") {
+    throw new Error("password is required");
+  }
+
+  const users = loadUsers();
+  if (users.some((u) => usernameKey(u.username) === usernameKey(uname))) {
+    throw new Error("Username already exists");
+  }
+
+  if (role !== "admin" && role !== "viewer") {
+    throw new Error('role must be "admin" or "viewer"');
+  }
+
+  const passwordHash = await hashPasswordSecure(String(password));
+  const now = new Date().toISOString();
+  const user = {
+    id: crypto.randomUUID(),
+    username: uname,
+    passwordHash,
+    role,
+    githubToken: null,
+    email: email == null ? null : String(email),
+    preferences: defaultPreferences(),
+    createdAt: now,
+    lastLoginAt: null,
+  };
+
+  users.push(user);
+  saveUsers(users);
+  return sanitizeUser(user);
 }
 
 /**
  * @param {string} id
  * @param {object} updates
- * @returns {object | null}
+ * @returns {Promise<object | null>}
  */
-export function updateUser(id, updates) {
+export async function updateUser(id, updates) {
   if (updates && typeof updates === "object" && Object.prototype.hasOwnProperty.call(updates, "role")) {
     if (updates.role !== "admin" && updates.role !== "viewer") {
       throw new Error('role must be "admin" or "viewer"');
@@ -214,7 +211,7 @@ export function updateUser(id, updates) {
       if (updates.password == null || String(updates.password) === "") {
         throw new Error("password cannot be empty");
       }
-      next.passwordHash = hashPassword(String(updates.password));
+      next.passwordHash = await hashPasswordSecure(String(updates.password));
     }
     if (Object.prototype.hasOwnProperty.call(updates, "preferences")) {
       const prefs = updates.preferences;
@@ -261,12 +258,26 @@ export function deleteUser(id) {
   }
 }
 
+async function passwordMatches(storedHash, plain) {
+  if (!storedHash || typeof storedHash !== "string") return false;
+  if (storedHash.startsWith("$2")) {
+    return bcrypt.compare(String(plain), storedHash);
+  }
+  const candidate = crypto.createHash("sha256").update(String(plain)).digest("hex");
+  if (candidate.length !== storedHash.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(candidate, "utf8"), Buffer.from(storedHash, "utf8"));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * @param {string} username
  * @param {string} password
- * @returns {object | null}
+ * @returns {Promise<object | null>}
  */
-export function validateCredentials(username, password) {
+export async function validateCredentials(username, password) {
   try {
     const uname = String(username ?? "").trim();
     if (!uname || password == null) return null;
@@ -275,8 +286,8 @@ export function validateCredentials(username, password) {
     const user = users.find((u) => usernameKey(u.username) === usernameKey(uname));
     if (!user || !user.passwordHash) return null;
 
-    const candidate = hashPassword(String(password));
-    if (candidate !== user.passwordHash) return null;
+    const ok = await passwordMatches(user.passwordHash, password);
+    if (!ok) return null;
 
     const updated = { ...user, lastLoginAt: new Date().toISOString() };
     const idx = users.findIndex((u) => u.id === user.id);

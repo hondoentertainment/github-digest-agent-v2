@@ -25,11 +25,21 @@ vi.mock("../src/utils/storage.js", () => ({
   getPreviousScan: vi.fn(() => null),
   getHistory: vi.fn(() => []),
   getScan: vi.fn(() => null),
+  getLatestHistoryId: vi.fn(() => "latest-id"),
+  writeScanPayload: vi.fn(),
 }));
 
 vi.mock("../src/middleware/auth.js", () => ({
-  authMiddleware: vi.fn((req, res, next) => next()),
+  authMiddleware: vi.fn((req, res, next) => {
+    req.auth = { sub: "test", role: "admin", username: null };
+    next();
+  }),
   isAuthEnabled: vi.fn(() => false),
+  signSessionToken: vi.fn(() => "test.jwt.token"),
+}));
+
+vi.mock("../src/middleware/rbac.js", () => ({
+  requireAdmin: vi.fn((req, res, next) => next()),
 }));
 
 vi.mock("../src/utils/scannerConfig.js", () => ({
@@ -80,6 +90,54 @@ vi.mock("../src/middleware/requestLogger.js", () => ({
 vi.mock("../src/utils/trends.js", () => ({
   getTrends: vi.fn(() => ({ labels: [], series: {}, summary: { avgTotal: 0, trend: "stable", peakDate: null, peakTotal: 0 } })),
   getCategoryTrend: vi.fn(() => ({ labels: [], values: [], change: 0, changePercent: 0 })),
+  clampTrendDays: vi.fn((d) => (Number.isFinite(Number(d)) && Number(d) > 0 ? Math.min(Number(d), 365) : 30)),
+}));
+
+vi.mock("../src/utils/trendCache.js", () => ({
+  getTrendsCached: vi.fn(() => ({ labels: [], series: {}, summary: { avgTotal: 0, trend: "stable", peakDate: null, peakTotal: 0 } })),
+  invalidateTrendCache: vi.fn(),
+  getCategoryTrendCached: vi.fn(() => ({ labels: [], values: [], change: 0, changePercent: 0 })),
+}));
+
+vi.mock("../src/utils/metrics.js", () => ({
+  getMetrics: vi.fn(() => ({ requestsTotal: 0 })),
+  metricsMiddleware: vi.fn(() => (req, res, next) => next()),
+  incScanCompleted: vi.fn(),
+  incScanFailed: vi.fn(),
+  incDigestSent: vi.fn(),
+  incWebhook: vi.fn(),
+}));
+
+vi.mock("../src/utils/auditLog.js", () => ({
+  appendAudit: vi.fn(),
+  getAuditLog: vi.fn(() => [{ ts: "2025-01-01", action: "test", actor: "a", detail: {} }]),
+}));
+
+vi.mock("../src/utils/alertRules.js", () => ({
+  getAlertRules: vi.fn(() => ({
+    securityCountGt: null,
+    failedBuildsGt: null,
+    pageOnCriticalSecurity: false,
+    slackMention: "",
+    totalItemsSpikeMultiplier: null,
+    spikeLookback: 8,
+  })),
+  setAlertRules: vi.fn((u) => ({
+    securityCountGt: null,
+    failedBuildsGt: null,
+    pageOnCriticalSecurity: false,
+    slackMention: "",
+    totalItemsSpikeMultiplier: null,
+    spikeLookback: 8,
+    ...u,
+  })),
+  evaluateAlertRules: vi.fn(() => ({ triggered: false, reasons: [] })),
+}));
+
+vi.mock("../src/services/integrations.js", () => ({
+  createLinearIssue: vi.fn(async () => ({ error: false, url: "https://linear.test/issue/1" })),
+  createJiraIssue: vi.fn(async () => ({ error: false, key: "GH-1" })),
+  triggerPagerDuty: vi.fn(async () => ({ error: false })),
 }));
 
 vi.mock("../src/utils/pluginLoader.js", () => ({
@@ -87,19 +145,24 @@ vi.mock("../src/utils/pluginLoader.js", () => ({
   getPluginsDir: vi.fn(() => "/plugins"),
 }));
 
-vi.mock("../src/utils/orgGrouper.js", () => ({
-  getOrgList: vi.fn(() => []),
-  groupByOrg: vi.fn((data) => data),
-  getOrgSummary: vi.fn(() => []),
-}));
+vi.mock("../src/utils/orgGrouper.js", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    getOrgList: vi.fn(() => []),
+    groupByOrg: vi.fn((data) => data),
+    getOrgSummary: vi.fn(() => []),
+  };
+});
 
 vi.mock("../src/utils/users.js", () => ({
   listUsers: vi.fn(() => []),
   getUser: vi.fn(() => null),
-  createUser: vi.fn(({ username, role }) => ({ id: "u1", username, role: role || "viewer" })),
-  updateUser: vi.fn(() => null),
+  hasUsers: vi.fn(() => false),
+  createUser: vi.fn(async ({ username, role }) => ({ id: "u1", username, role: role || "viewer" })),
+  updateUser: vi.fn(async () => ({ id: "u1", username: "updated", role: "viewer" })),
   deleteUser: vi.fn(() => true),
-  validateCredentials: vi.fn(() => null),
+  validateCredentials: vi.fn(async () => null),
 }));
 
 vi.mock("../src/services/webhookHandler.js", () => ({
@@ -169,6 +232,28 @@ describe("API Routes", () => {
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ status: "ok" });
       expect(res.body).toHaveProperty("historyCount");
+    });
+  });
+
+  describe("GET /api/me", () => {
+    it("returns session role and sub", async () => {
+      const res = await request(app).get("/api/me");
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("ok");
+      expect(res.body.data).toMatchObject({ sub: "test", role: "admin", username: null });
+      expect(res.body.data.schedule).toBeNull();
+      expect(res.body.data.visibleOrgs).toEqual([]);
+      expect(res.body.data.teamView).toBe(false);
+    });
+  });
+
+  describe("GET /api/anomalies", () => {
+    it("returns anomaly payload", async () => {
+      const res = await request(app).get("/api/anomalies");
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("ok");
+      expect(res.body.data).toHaveProperty("spikeEvaluation");
+      expect(res.body.data).toHaveProperty("alerts");
     });
   });
 
@@ -352,6 +437,22 @@ describe("API Routes", () => {
       const res = await request(app).get("/api/orgs");
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveProperty("orgs");
+    });
+  });
+
+  describe("POST /api/compare-repos", () => {
+    it("compares repos from latest scan", async () => {
+      runScan.mockResolvedValue(mockScanResult);
+      await request(app).post("/api/scan");
+      const res = await request(app).post("/api/compare-repos").send({ repos: ["u/r"] });
+      expect(res.status).toBe(200);
+      expect(res.body.data.repos).toBeInstanceOf(Array);
+      expect(res.body.data.repos[0]).toMatchObject({ repo: "u/r" });
+    });
+
+    it("rejects empty repos", async () => {
+      const res = await request(app).post("/api/compare-repos").send({ repos: [] });
+      expect(res.status).toBe(400);
     });
   });
 

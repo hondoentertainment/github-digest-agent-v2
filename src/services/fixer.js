@@ -25,13 +25,14 @@ try {
 }
 
 const JSON_SYSTEM = `You are a senior engineer. Respond with ONLY valid JSON (no markdown fence), exactly this shape:
-{"summary":"string","steps":["string",...],"confidence":"high"|"medium"|"low","canAutoPR":boolean,"suggestedBranch":"string or null"}
+{"summary":"string","steps":["string",...],"confidence":"high"|"medium"|"low","canAutoPR":boolean,"suggestedBranch":"string or null","fileChanges":[{"path":"relative/path/in/repo","content":"full file contents as UTF-8 string"}]}
 Rules:
 - summary: one-line fix description.
 - steps: 3-8 concrete actionable steps.
 - confidence: high if the fix path is standard; medium if some repo context is assumed; low if uncertain.
 - canAutoPR: true only for issues and security items where a dependency bump or small config change could be automated; false for ambiguous code or policy. For builds, prefer false unless it is clearly a one-line config fix.
-- suggestedBranch: a safe branch name like fix/ci-node-version or fix/dependabot-xyz, or null if unclear.`;
+- suggestedBranch: a safe branch name like fix/ci-node-version or fix/dependabot-xyz, or null if unclear.
+- fileChanges: optional. Include only when you can output complete file contents for 1–5 files (e.g. package.json version bump, small config YAML). Omit or use [] when unsure. Paths must be repo-relative, no ".." segments.`;
 
 const CONFIDENCE = new Set(["high", "medium", "low"]);
 
@@ -146,12 +147,30 @@ function normalizeSuggestion(obj, category) {
             "Open or update a PR and request review.",
           ];
 
+  /** @type {{ path: string; content: string }[]} */
+  let fileChanges = [];
+  if (Array.isArray(obj.fileChanges)) {
+    const max = 25;
+    for (const entry of obj.fileChanges) {
+      if (fileChanges.length >= max) break;
+      if (!entry || typeof entry !== "object") continue;
+      const path =
+        typeof entry.path === "string"
+          ? entry.path.trim().replace(/^\/+/, "").replace(/\\/g, "/")
+          : "";
+      const content = typeof entry.content === "string" ? entry.content : "";
+      if (!path || path.includes("..") || path.length > 500 || content.length > 512000) continue;
+      fileChanges.push({ path, content });
+    }
+  }
+
   return {
     summary,
     steps: steps.length ? steps : defaultSteps,
     confidence,
     canAutoPR,
     suggestedBranch,
+    fileChanges,
   };
 }
 
@@ -169,7 +188,7 @@ export function canSuggestFix(item, category) {
 /**
  * @param {unknown} item
  * @param {string} category
- * @returns {Promise<{ summary: string; steps: string[]; confidence: "high"|"medium"|"low"; canAutoPR: boolean; suggestedBranch: string | null }>}
+ * @returns {Promise<{ summary: string; steps: string[]; confidence: "high"|"medium"|"low"; canAutoPR: boolean; suggestedBranch: string | null; fileChanges: { path: string; content: string }[] }>}
  */
 export async function generateFixSuggestion(item, category) {
   if (!canSuggestFix(item, category)) {
@@ -183,6 +202,7 @@ export async function generateFixSuggestion(item, category) {
       confidence: "low",
       canAutoPR: false,
       suggestedBranch: null,
+      fileChanges: [],
     };
   }
 
@@ -202,10 +222,10 @@ export async function generateFixSuggestion(item, category) {
 }
 
 /**
- * @param {{ owner: string; repo: string; title: string; body: string; branch: string; baseBranch?: string }} params
+ * @param {{ owner: string; repo: string; title: string; body: string; branch: string; baseBranch?: string; files?: { path: string; content: string }[] }} params
  * @returns {Promise<{ prUrl: string; prNumber: number; branch: string } | { error: true; message: string; status?: number }>}
  */
-export async function createFixPR({ owner, repo, title, body, branch, baseBranch = "main" }) {
+export async function createFixPR({ owner, repo, title, body, branch, baseBranch = "main", files }) {
   try {
     if (!owner?.trim() || !repo?.trim() || !title?.trim() || !branch?.trim()) {
       return {
@@ -221,7 +241,7 @@ export async function createFixPR({ owner, repo, title, body, branch, baseBranch
 
     const {
       data: {
-        object: { sha },
+        object: { sha: baseCommitSha },
       },
     } = await octokit.rest.git.getRef({
       owner: o,
@@ -229,11 +249,61 @@ export async function createFixPR({ owner, repo, title, body, branch, baseBranch
       ref: `heads/${base}`,
     });
 
+    const patchFiles = Array.isArray(files)
+      ? files.filter((f) => f && typeof f.path === "string" && typeof f.content === "string")
+      : [];
+
+    let headSha = baseCommitSha;
+
+    if (patchFiles.length > 0) {
+      const { data: baseCommit } = await octokit.rest.git.getCommit({
+        owner: o,
+        repo: r,
+        commit_sha: baseCommitSha,
+      });
+      const baseTreeSha = baseCommit.tree.sha;
+
+      const treeEntries = await Promise.all(
+        patchFiles.map(async (f) => {
+          const rel = String(f.path).trim().replace(/^\/+/, "");
+          const content = typeof f.content === "string" ? f.content : "";
+          const { data: blob } = await octokit.rest.git.createBlob({
+            owner: o,
+            repo: r,
+            content: Buffer.from(content, "utf8").toString("base64"),
+            encoding: "base64",
+          });
+          return {
+            path: rel,
+            mode: "100644",
+            type: "blob",
+            sha: blob.sha,
+          };
+        })
+      );
+
+      const { data: newTree } = await octokit.rest.git.createTree({
+        owner: o,
+        repo: r,
+        base_tree: baseTreeSha,
+        tree: treeEntries,
+      });
+
+      const { data: newCommit } = await octokit.rest.git.createCommit({
+        owner: o,
+        repo: r,
+        message: title.trim().slice(0, 500) || "Apply automated fix",
+        tree: newTree.sha,
+        parents: [baseCommitSha],
+      });
+      headSha = newCommit.sha;
+    }
+
     await octokit.rest.git.createRef({
       owner: o,
       repo: r,
       ref: `refs/heads/${b}`,
-      sha,
+      sha: headSha,
     });
 
     const { data: pr } = await octokit.rest.pulls.create({
