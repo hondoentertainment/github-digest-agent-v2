@@ -4,7 +4,15 @@ import { fileURLToPath } from "url";
 import { atomicWriteJson } from "./atomicWrite.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, "../../data");
+
+function resolveDataDir() {
+  const fromEnv = process.env.DATA_DIR?.trim();
+  if (fromEnv) return path.resolve(fromEnv);
+  if (process.env.VERCEL) return path.join("/tmp", "github-digest-data");
+  return path.join(__dirname, "../../data");
+}
+
+const DATA_DIR = resolveDataDir();
 const SCANS_DIR = path.join(DATA_DIR, "scans");
 const HISTORY_FILE = path.join(DATA_DIR, "history.json");
 const MAX_HISTORY = parseInt(process.env.MAX_SCAN_HISTORY || "50", 10);
