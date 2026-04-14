@@ -774,7 +774,7 @@ server.on("upgrade", (req, socket, head) => {
   }
 });
 
-if (process.env.NODE_ENV !== "test") {
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
   server.listen(PORT, () => {
     console.log(`\n🌐 GitHub Digest Dashboard running at http://localhost:${PORT}`);
     console.log(`🔌 Scan WebSocket: ws://localhost:${PORT}/ws/scan`);

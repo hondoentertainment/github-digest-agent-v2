@@ -7,7 +7,6 @@
   },
   "type": "module",
   "scripts": {
-    "build": "node -e \"process.exit(0)\"",
     "start": "node src/scheduler.js",
     "dev": "node src/scheduler.js --now",
     "scan": "node src/index.js",
