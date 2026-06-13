@@ -10,6 +10,7 @@
     "start": "node src/scheduler.js",
     "dev": "node src/scheduler.js --now",
     "scan": "node src/index.js",
+    "scan:repos": "node scripts/scan-repos.mjs",
     "server": "node src/server.js",
     "dashboard": "node src/server.js",
     "test": "vitest run",

@@ -19,24 +19,22 @@ jobs:
 
       - run: npm ci
 
-      - name: Validate required secrets
+      - name: Validate GitHub token
         env:
           DIGEST_GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          missing=0
           if [ -z "$DIGEST_GITHUB_TOKEN" ]; then
             echo "::error::DIGEST_GITHUB_TOKEN is not set. Add a GitHub PAT (repo, read:org) under Settings → Secrets → Actions."
-            missing=1
+            exit 1
           fi
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error::ANTHROPIC_API_KEY is not set."
-            missing=1
-          fi
-          if [ "$missing" -ne 0 ]; then exit 1; fi
-          echo "Required digest secrets are present."
+          echo "DIGEST_GITHUB_TOKEN is present."
 
-      - run: npm run scan
+      - name: Scan repositories
+        run: npm run scan:repos
+        env:
+          GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
+
+      - name: Send AI digest email
         env:
           GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -45,3 +43,9 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASS" ] || [ -z "$EMAIL_TO" ]; then
+            echo "::warning::Repository scan completed. Email digest skipped — add ANTHROPIC_API_KEY, SMTP_USER, SMTP_PASS, and EMAIL_TO to enable outbound mail."
+            exit 0
+          fi
+          node -e "import('./src/index.js').then(m => m.runDigest())"
