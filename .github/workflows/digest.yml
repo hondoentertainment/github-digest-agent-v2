@@ -19,6 +19,23 @@ jobs:
 
       - run: npm ci
 
+      - name: Validate required secrets
+        env:
+          DIGEST_GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          missing=0
+          if [ -z "$DIGEST_GITHUB_TOKEN" ]; then
+            echo "::error::DIGEST_GITHUB_TOKEN is not set. Add a GitHub PAT (repo, read:org) under Settings → Secrets → Actions."
+            missing=1
+          fi
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY is not set."
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+          echo "Required digest secrets are present."
+
       - run: npm run scan
         env:
           GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
